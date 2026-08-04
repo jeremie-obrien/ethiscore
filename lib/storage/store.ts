@@ -52,6 +52,22 @@ export async function listEvaluations(): Promise<EvaluationListEntry[]> {
   return entries;
 }
 
+export type EvaluationSort = "date" | "score";
+
+/** Newest-first for "date"; highest-score-first for "score" (a leaderboard ranking). */
+export function sortEvaluationRecords(
+  records: EvaluationRecord[],
+  sort: EvaluationSort
+): EvaluationRecord[] {
+  const sorted = [...records];
+  if (sort === "score") {
+    sorted.sort((a, b) => b.overallScore - a.overallScore);
+  } else {
+    sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  return sorted;
+}
+
 export async function findEvaluation(idOrFileName: string): Promise<EvaluationListEntry | undefined> {
   const entries = await listEvaluations();
   return entries.find(

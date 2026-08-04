@@ -4,7 +4,13 @@ import chalk from "chalk";
 import { resolveApiKey } from "./resolveApiKey";
 import { collectInputs } from "./prompts/collectInputs";
 import { evaluateCompany } from "../lib/scoring/evaluate";
-import { saveEvaluation, listEvaluations, findEvaluation } from "../lib/storage/store";
+import {
+  saveEvaluation,
+  listEvaluations,
+  findEvaluation,
+  sortEvaluationRecords,
+  type EvaluationSort,
+} from "../lib/storage/store";
 import { renderReport } from "./render/report";
 import { DEFAULT_MODEL } from "../lib/anthropic/client";
 
@@ -58,16 +64,30 @@ program
 program
   .command("list")
   .description("List past evaluations")
-  .action(async () => {
+  .option("--sort <by>", "Sort by 'score' (highest first, a ranking) or 'date' (newest first)", "score")
+  .action(async (opts) => {
+    const sort = opts.sort as EvaluationSort;
+    if (sort !== "date" && sort !== "score") {
+      console.error(chalk.red(`  --sort must be "date" or "score", got "${opts.sort}"`));
+      process.exitCode = 1;
+      return;
+    }
+
     const entries = await listEvaluations();
     if (entries.length === 0) {
       console.log(chalk.dim("  No evaluations saved yet. Run `ethiscore evaluate` first."));
       return;
     }
-    for (const { record } of entries) {
+
+    const records = sortEvaluationRecords(
+      entries.map((e) => e.record),
+      sort
+    );
+    records.forEach((record, i) => {
       const score = `${(record.overallScore * 100).toFixed(1)}%`;
-      console.log(`  ${chalk.dim(record.createdAt)}  ${chalk.bold(record.company.padEnd(24))}  ${score}  ${chalk.dim(record.id)}`);
-    }
+      const rank = sort === "score" ? chalk.dim(`${(i + 1).toString().padStart(2)}. `) : "";
+      console.log(`  ${rank}${chalk.dim(record.createdAt)}  ${chalk.bold(record.company.padEnd(24))}  ${score}  ${chalk.dim(record.id)}`);
+    });
   });
 
 program
