@@ -1,9 +1,12 @@
 import type { EvaluationRecord } from "@/lib/scoring/schema";
 import { Meter } from "./Meter";
 import { StatusChip } from "./StatusChip";
+import { SavePresetControl } from "./SavePresetControl";
 import { pct } from "./scoreStatus";
 
 export function ScoreReport({ record }: { record: EvaluationRecord }) {
+  const missingDescriptions = record.criteria.some((c) => !c.description);
+
   return (
     <div className="rounded-lg border border-border bg-surface p-6 sm:p-8">
       <div className="mb-6 flex items-baseline justify-between gap-4">
@@ -11,7 +14,21 @@ export function ScoreReport({ record }: { record: EvaluationRecord }) {
         <span className="text-sm text-ink-muted">{record.model}</span>
       </div>
 
-      <h3 className="mb-3 text-sm font-medium text-ink-secondary">Criteria breakdown</h3>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-medium text-ink-secondary">Criteria breakdown</h3>
+        <SavePresetControl
+          criteria={record.criteria.map((c) => ({
+            name: c.name,
+            description: c.description,
+            weight: c.weight,
+          }))}
+          disabledReason={
+            missingDescriptions
+              ? "This evaluation was saved before criteria descriptions were stored, so it can't be turned into a preset."
+              : undefined
+          }
+        />
+      </div>
       <div className="mb-8 divide-y divide-gridline border-y border-gridline">
         {record.criteria.map((c) => (
           <div key={c.name} className="py-4 first:pt-0 last:pb-0">

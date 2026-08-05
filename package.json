@@ -1,24 +1,15 @@
 {
   "name": "ethiscore",
   "version": "0.1.0",
-  "description": "Score a company against custom weighted ethics criteria using Claude, from the CLI or a local web UI.",
+  "description": "Score a company against custom weighted ethics criteria using Claude.",
   "type": "module",
-  "bin": {
-    "ethiscore": "dist/cli/cli.js"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "cli:build": "tsc -p tsconfig.cli.json && echo '{\"type\":\"commonjs\"}' > dist/package.json",
-    "cli:dev": "tsx cli/cli.ts",
-    "cli:start": "node dist/cli/cli.js"
+    "start": "next start"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
-    "@inquirer/prompts": "^7.2.1",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
     "next": "^16.2.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -30,7 +21,6 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "engines": {

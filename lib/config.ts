@@ -42,3 +42,7 @@ export function getConfigFilePath(): string {
 export function getEvaluationsDir(): string {
   return path.join(CONFIG_DIR, "evaluations");
 }
+
+export function getPresetsDir(): string {
+  return path.join(CONFIG_DIR, "presets");
+}

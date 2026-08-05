@@ -8,6 +8,8 @@ export interface EvaluateParams {
   company: string;
   criteria: CriterionInput[];
   model?: string;
+  presetId?: string;
+  presetName?: string;
 }
 
 export async function evaluateCompany({
@@ -15,6 +17,8 @@ export async function evaluateCompany({
   company,
   criteria,
   model = DEFAULT_MODEL,
+  presetId,
+  presetName,
 }: EvaluateParams): Promise<EvaluationRecord> {
   const system = buildSystemPrompt();
   const userPrompt = buildUserPrompt(company, criteria);
@@ -32,6 +36,7 @@ export async function evaluateCompany({
     }
     return {
       ...match,
+      description: input.description,
       weight: input.weight,
       normalizedWeight: input.weight / totalWeight,
     };
@@ -52,5 +57,7 @@ export async function evaluateCompany({
     criteria: criteriaResults,
     overallScore: Math.round(overallScore * 10000) / 10000,
     overallSummary: modelEvaluation.overall_summary,
+    presetId,
+    presetName,
   };
 }

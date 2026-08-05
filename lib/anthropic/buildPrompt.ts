@@ -12,7 +12,9 @@ For each criterion:
 - Write a concise, evidence-based rationale (2-5 sentences) citing specific facts.
 - List source URLs you relied on for that criterion.
 
-Be objective and evidence-based rather than reputational or vibes-based. If evidence is thin or mixed, say so \
+Some criteria may have no description — just a name. For those, use your best judgment for what that \
+criterion means and how to evaluate it. Be objective and evidence-based rather than reputational or vibes-based. \
+If evidence is thin or mixed, say so \
 in the rationale and score conservatively around the middle rather than guessing at extremes. The overall score \
 is computed outside the model as a weighted geometric mean across criteria, which means a very low score on any \
 one criterion drags the whole result down hard — reserve scores near 0.0 for cases with clear, well-evidenced \
@@ -24,7 +26,10 @@ the company's ethical profile across all criteria.`;
 
 export function buildUserPrompt(company: string, criteria: CriterionInput[]): string {
   const criteriaBlock = criteria
-    .map((c, i) => `${i + 1}. "${c.name}" (weight: ${c.weight}) — ${c.description}`)
+    .map((c, i) => {
+      const desc = c.description?.trim();
+      return `${i + 1}. "${c.name}" (weight: ${c.weight})${desc ? ` — ${desc}` : ""}`;
+    })
     .join("\n");
 
   return `Company to evaluate: ${company}

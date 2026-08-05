@@ -6,18 +6,24 @@ import { pct } from "./scoreStatus";
 export function EvaluationList({
   evaluations,
   showRank = false,
+  emptyMessage,
 }: {
   evaluations: EvaluationRecord[];
   showRank?: boolean;
+  emptyMessage?: React.ReactNode;
 }) {
   if (evaluations.length === 0) {
     return (
       <p className="text-sm text-ink-secondary">
-        No evaluations saved yet.{" "}
-        <Link href="/" className="hover:underline">
-          Run one from the home page
-        </Link>
-        .
+        {emptyMessage ?? (
+          <>
+            No evaluations saved yet.{" "}
+            <Link href="/" className="hover:underline">
+              Run one from the home page
+            </Link>
+            .
+          </>
+        )}
       </p>
     );
   }
@@ -41,7 +47,12 @@ export function EvaluationList({
               <div className="text-xs text-ink-muted">
                 {new Date(record.createdAt).toLocaleString()}
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {record.presetName && (
+                  <span className="rounded-full bg-page px-2 py-0.5 text-xs font-medium text-ink-secondary">
+                    {record.presetName}
+                  </span>
+                )}
                 {record.criteria.map((c) => (
                   <span
                     key={c.name}
