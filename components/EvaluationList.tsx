@@ -18,8 +18,8 @@ export function EvaluationList({
         {emptyMessage ?? (
           <>
             No evaluations saved yet.{" "}
-            <Link href="/" className="hover:underline">
-              Run one from the home page
+            <Link href="/evaluate" className="hover:underline">
+              Run one
             </Link>
             .
           </>

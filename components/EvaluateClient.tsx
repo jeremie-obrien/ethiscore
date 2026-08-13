@@ -6,8 +6,17 @@ import type { EvaluationRecord } from "@/lib/scoring/schema";
 import { ApiKeyForm } from "./ApiKeyForm";
 import { EvaluateForm } from "./EvaluateForm";
 import { ScoreReport } from "./ScoreReport";
+import type { CriterionForm } from "./CriteriaEditor";
 
-export function HomeClient({ initialHasApiKey }: { initialHasApiKey: boolean }) {
+export function EvaluateClient({
+  initialHasApiKey,
+  initialCriteria,
+  initialActivePreset,
+}: {
+  initialHasApiKey: boolean;
+  initialCriteria?: CriterionForm[];
+  initialActivePreset?: { id: string; name: string } | null;
+}) {
   const [hasApiKey, setHasApiKey] = useState(initialHasApiKey);
   const [result, setResult] = useState<EvaluationRecord | null>(null);
 
@@ -16,7 +25,11 @@ export function HomeClient({ initialHasApiKey }: { initialHasApiKey: boolean }) 
       {!hasApiKey ? (
         <ApiKeyForm onSaved={() => setHasApiKey(true)} />
       ) : (
-        <EvaluateForm onResult={setResult} />
+        <EvaluateForm
+          onResult={setResult}
+          initialCriteria={initialCriteria}
+          initialActivePreset={initialActivePreset}
+        />
       )}
 
       {result && (

@@ -47,5 +47,6 @@ export const PresetSchema = z.object({
   name: z.string().min(1),
   createdAt: z.string(),
   criteria: z.array(CriterionInputSchema).min(1),
+  isDefault: z.boolean().default(false),
 });
 export type Preset = z.infer<typeof PresetSchema>;

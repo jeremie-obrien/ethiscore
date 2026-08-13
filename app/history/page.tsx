@@ -29,8 +29,8 @@ export default async function HistoryPage({
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <div className="mb-6 flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold text-ink-primary">History</h1>
-        <Link href="/" className="text-sm text-ink-secondary hover:underline">
+        <h1 className="text-2xl font-semibold text-ink-primary">Past evaluations</h1>
+        <Link href="/evaluate" className="text-sm text-ink-secondary hover:underline">
           New evaluation
         </Link>
       </div>

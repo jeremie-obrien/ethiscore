@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     name: parsed.data.name,
     createdAt: new Date().toISOString(),
     criteria: parsed.data.criteria,
+    isDefault: false,
   };
   await savePreset(preset);
   return NextResponse.json({ preset });
