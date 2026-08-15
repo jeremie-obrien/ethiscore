@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getEvaluationsDir } from "../config";
 import { EvaluationRecordSchema, type EvaluationRecord } from "../scoring/schema";
@@ -73,4 +73,11 @@ export async function findEvaluation(idOrFileName: string): Promise<EvaluationLi
   return entries.find(
     (e) => e.record.id === idOrFileName || e.fileName === idOrFileName || e.fileName.startsWith(idOrFileName)
   );
+}
+
+export async function deleteEvaluation(id: string): Promise<boolean> {
+  const entry = await findEvaluation(id);
+  if (!entry) return false;
+  await unlink(entry.filePath);
+  return true;
 }

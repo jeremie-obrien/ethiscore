@@ -1,8 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import type { Preset } from "@/lib/scoring/schema";
+import Link from "next/link";
+import { useRef, useState } from "react";
+import type { EvaluationRecord, Preset } from "@/lib/scoring/schema";
+import { parseCsv } from "@/lib/csv";
 import { CriteriaEditor, emptyCriterion, filledCriteria, type CriterionForm } from "./CriteriaEditor";
+
+/** Expects a header row, then "Criterion name","Criterion description","Criterion weight" per row. */
+function criteriaFromCsv(text: string): CriterionForm[] {
+  const rows = parseCsv(text);
+  const dataRows = rows.slice(1); // skip header
+  return dataRows
+    .map((r): CriterionForm => {
+      const name = (r[0] ?? "").trim();
+      const description = (r[1] ?? "").trim();
+      const weightNum = Number(r[2]);
+      const weight = Number.isFinite(weightNum) && weightNum > 0 ? String(weightNum) : "1";
+      return { name, description, weight };
+    })
+    .filter((c) => c.name.length > 0);
+}
 
 function toCriteriaForm(preset: Preset): CriterionForm[] {
   return preset.criteria.map((c) => ({
@@ -28,11 +45,34 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rerunSuggestion, setRerunSuggestion] = useState<{ presetId: string; count: number } | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCriteria, setNewCriteria] = useState<CriterionForm[]>([{ ...emptyCriterion }]);
   const [creatingBusy, setCreatingBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    setError(null);
+    try {
+      const text = await file.text();
+      const parsed = criteriaFromCsv(text);
+      if (parsed.length === 0) {
+        throw new Error(
+          'No valid rows found. Expected a header row, then "Criterion name","Criterion description","Criterion weight" per row.'
+        );
+      }
+      setNewCriteria(parsed);
+      setNewName((prev) => prev || file.name.replace(/\.csv$/i, ""));
+      setCreating(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import CSV");
+    }
+  }
 
   function startEdit(preset: Preset) {
     setEditingId(preset.id);
@@ -58,6 +98,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     }
     setBusyId(id);
     setError(null);
+    setRerunSuggestion(null);
     try {
       const res = await fetch(`/api/presets/${id}`, {
         method: "PATCH",
@@ -68,6 +109,17 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
       if (!res.ok) throw new Error(body.error ?? "Failed to update preset");
       setPresets((prev) => prev.map((p) => (p.id === id ? (body.preset as Preset) : p)));
       setEditingId(null);
+
+      try {
+        const evalRes = await fetch("/api/evaluations");
+        const evalBody = await evalRes.json();
+        const count = ((evalBody.evaluations ?? []) as EvaluationRecord[]).filter(
+          (e) => e.presetId === id
+        ).length;
+        if (count > 0) setRerunSuggestion({ presetId: id, count });
+      } catch {
+        // non-critical — just skip the suggestion if this fails
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -182,14 +234,37 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="w-full rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
-          >
-            + New preset
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="flex-1 rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
+            >
+              + New preset (manual)
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
+              title='CSV columns: "Criterion name","Criterion description","Criterion weight"'
+            >
+              Import CSV
+            </button>
+          </div>
         )}
+        {!creating && (
+          <p className="mt-2 text-xs text-ink-muted">
+            CSV format: header row, then one row per criterion — &ldquo;Criterion name&rdquo;,
+            &ldquo;Criterion description&rdquo;, &ldquo;Criterion weight&rdquo;.
+          </p>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleImportFile}
+          className="hidden"
+        />
       </div>
 
       {presets.length === 0 && (
@@ -275,7 +350,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="mb-4 flex flex-wrap gap-1">
                 {preset.criteria.map((c) => (
                   <span
                     key={c.name}
@@ -285,6 +360,23 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
                   </span>
                 ))}
               </div>
+              <div className="flex justify-end">
+                <Link
+                  href={`/evaluate?preset=${preset.id}`}
+                  className="inline-block rounded-md bg-good px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                >
+                  New evaluation with this preset
+                </Link>
+              </div>
+              {rerunSuggestion?.presetId === preset.id && (
+                <p className="mt-3 text-sm text-ink-secondary">
+                  {rerunSuggestion.count} past evaluation{rerunSuggestion.count === 1 ? "" : "s"} used
+                  this preset before the edit.{" "}
+                  <Link href={`/history?preset=${preset.id}`} className="font-medium text-ink-primary hover:underline">
+                    Review and re-run them →
+                  </Link>
+                </p>
+              )}
             </div>
           )}
         </div>

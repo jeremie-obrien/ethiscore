@@ -1,20 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { EvaluationRecord, Preset } from "@/lib/scoring/schema";
 import { SavePresetControl } from "./SavePresetControl";
 import { CriteriaEditor, emptyCriterion, filledCriteria, type CriterionForm } from "./CriteriaEditor";
+
+const DRAFT_KEY = "ethiscore:evaluate-draft";
+
+interface EvaluateDraft {
+  company: string;
+  criteria: CriterionForm[];
+  activePreset: { id: string; name: string } | null;
+}
+
+function loadDraft(): EvaluateDraft | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as EvaluateDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(draft: EvaluateDraft) {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // storage unavailable (e.g. private browsing) — draft persistence just won't work
+  }
+}
 
 export function EvaluateForm({
   onResult,
   initialCriteria,
   initialActivePreset,
+  initialCompany,
+  skipDraft,
 }: {
   onResult: (record: EvaluationRecord) => void;
   initialCriteria?: CriterionForm[];
   initialActivePreset?: { id: string; name: string } | null;
+  initialCompany?: string;
+  skipDraft?: boolean;
 }) {
-  const [company, setCompany] = useState("");
+  const [company, setCompany] = useState(initialCompany ?? "");
   const [criteria, setCriteria] = useState<CriterionForm[]>(
     initialCriteria && initialCriteria.length > 0
       ? initialCriteria
@@ -27,6 +57,7 @@ export function EvaluateForm({
   const [activePreset, setActivePreset] = useState<{ id: string; name: string } | null>(
     initialActivePreset ?? null
   );
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     fetch("/api/presets")
@@ -34,6 +65,29 @@ export function EvaluateForm({
       .then((body) => setPresets(body.presets ?? []))
       .catch(() => {});
   }, []);
+
+  // Restore an in-progress draft after mount (not during the initial render, so
+  // server and client markup match on hydration). A fresh context — re-running a
+  // past evaluation, or picking a specific preset — always wins over a stale
+  // draft from browsing away and back (skipDraft is set by the page in that case).
+  useEffect(() => {
+    if (!skipDraft) {
+      const draft = loadDraft();
+      if (draft) {
+        setCompany(draft.company);
+        setCriteria(draft.criteria);
+        setActivePreset(draft.activePreset);
+      }
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the draft in sync so it survives navigating to another page and back.
+  useEffect(() => {
+    if (!hydrated) return;
+    saveDraft({ company, criteria, activePreset });
+  }, [hydrated, company, criteria, activePreset]);
 
   function mutateCriteria(next: CriterionForm[]) {
     setCriteria(next);
@@ -103,7 +157,7 @@ export function EvaluateForm({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-ink-secondary">Load preset</label>
+        <label className="text-sm font-medium text-ink-secondary">Preset:</label>
         <select
           value={activePreset?.id ?? ""}
           onChange={(e) => loadPreset(e.target.value)}
@@ -119,6 +173,9 @@ export function EvaluateForm({
         {activePreset && (
           <span className="text-xs text-ink-muted">using &ldquo;{activePreset.name}&rdquo;</span>
         )}
+        <Link href="/presets" className="text-xs text-ink-secondary hover:underline">
+          Manage presets
+        </Link>
         <div className="ml-auto">
           <SavePresetControl
             criteria={filledCriteria(criteria).map((c) => ({

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { EvaluationRecord } from "@/lib/scoring/schema";
 import { Meter } from "./Meter";
 import { StatusChip } from "./StatusChip";
@@ -9,9 +10,14 @@ export function ScoreReport({ record }: { record: EvaluationRecord }) {
 
   return (
     <div className="rounded-lg border border-border bg-surface p-6 sm:p-8">
-      <div className="mb-6 flex items-baseline justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
         <h2 className="text-xl font-semibold text-ink-primary">{record.company}</h2>
-        <span className="text-sm text-ink-muted">{record.model}</span>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="text-ink-muted">{record.model}</span>
+          <Link href={`/evaluate?rerunFrom=${record.id}`} className="text-ink-secondary hover:underline">
+            Re-run with different preset
+          </Link>
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

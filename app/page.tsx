@@ -4,7 +4,7 @@ const DESTINATIONS = [
   {
     href: "/evaluate",
     title: "New evaluation",
-    description: "Score a company against a set of weighted ethics criteria.",
+    description: "Score a company against a set of weighted criteria.",
   },
   {
     href: "/history",
@@ -14,7 +14,7 @@ const DESTINATIONS = [
   {
     href: "/presets",
     title: "Criteria management",
-    description: "Create, edit, delete, and set the default criteria preset.",
+    description: "Create, edit and delete criteria presets.",
   },
 ];
 
@@ -23,7 +23,7 @@ export default function HomePage() {
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <h1 className="mb-2 text-2xl font-semibold text-ink-primary">EthiScore</h1>
       <p className="mb-8 text-sm text-ink-secondary">
-        Score a company against custom weighted ethics criteria using Claude.
+        Score a company against custom weighted criteria using Claude.
       </p>
       <div className="flex flex-col gap-4">
         {DESTINATIONS.map((d) => (

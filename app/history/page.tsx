@@ -30,7 +30,7 @@ export default async function HistoryPage({
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <div className="mb-6 flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold text-ink-primary">Past evaluations</h1>
-        <Link href="/evaluate" className="text-sm text-ink-secondary hover:underline">
+        <Link href="/evaluate?reset=1" className="text-sm text-ink-secondary hover:underline">
           New evaluation
         </Link>
       </div>
@@ -47,6 +47,7 @@ export default async function HistoryPage({
         )}
       </div>
       <EvaluationList
+        key={`${sort}-${presetId ?? "all"}`}
         evaluations={evaluations}
         showRank={sort === "score"}
         emptyMessage={
