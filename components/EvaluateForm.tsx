@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { EvaluationRecord, Preset } from "@/lib/scoring/schema";
-import { SavePresetControl } from "./SavePresetControl";
-import { CriteriaEditor, emptyCriterion, filledCriteria, type CriterionForm } from "./CriteriaEditor";
+import type { CriteriaSet, EvaluateResult } from "@/lib/scoring/schema";
+import { CompanyTagInput } from "./CompanyTagInput";
+import { CriteriaSetPreview } from "./CriteriaSetPreview";
 
 const DRAFT_KEY = "ethiscore:evaluate-draft";
 
 interface EvaluateDraft {
-  company: string;
-  criteria: CriterionForm[];
-  activePreset: { id: string; name: string } | null;
+  companies: string[];
+  criteriaSetId: string | null;
 }
 
 function loadDraft(): EvaluateDraft | null {
@@ -33,50 +32,40 @@ function saveDraft(draft: EvaluateDraft) {
 
 export function EvaluateForm({
   onResult,
-  initialCriteria,
-  initialActivePreset,
-  initialCompany,
+  initialCompanies,
+  initialCriteriaSetId,
   skipDraft,
 }: {
-  onResult: (record: EvaluationRecord) => void;
-  initialCriteria?: CriterionForm[];
-  initialActivePreset?: { id: string; name: string } | null;
-  initialCompany?: string;
+  onResult: (results: EvaluateResult[]) => void;
+  initialCompanies?: string[];
+  initialCriteriaSetId?: string | null;
   skipDraft?: boolean;
 }) {
-  const [company, setCompany] = useState(initialCompany ?? "");
-  const [criteria, setCriteria] = useState<CriterionForm[]>(
-    initialCriteria && initialCriteria.length > 0
-      ? initialCriteria
-      : [{ ...emptyCriterion }, { ...emptyCriterion }, { ...emptyCriterion }]
-  );
+  const [companies, setCompanies] = useState<string[]>(initialCompanies ?? []);
+  const [criteriaSetId, setCriteriaSetId] = useState<string | null>(initialCriteriaSetId ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [presets, setPresets] = useState<Preset[]>([]);
-  const [activePreset, setActivePreset] = useState<{ id: string; name: string } | null>(
-    initialActivePreset ?? null
-  );
+  const [criteriaSets, setCriteriaSets] = useState<CriteriaSet[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    fetch("/api/presets")
+    fetch("/api/criteria-sets")
       .then((res) => res.json())
-      .then((body) => setPresets(body.presets ?? []))
+      .then((body) => setCriteriaSets(body.criteriaSets ?? []))
       .catch(() => {});
   }, []);
 
   // Restore an in-progress draft after mount (not during the initial render, so
   // server and client markup match on hydration). A fresh context — re-running a
-  // past evaluation, or picking a specific preset — always wins over a stale
+  // past evaluation, or picking a specific criteria set — always wins over a stale
   // draft from browsing away and back (skipDraft is set by the page in that case).
   useEffect(() => {
     if (!skipDraft) {
       const draft = loadDraft();
       if (draft) {
-        setCompany(draft.company);
-        setCriteria(draft.criteria);
-        setActivePreset(draft.activePreset);
+        setCompanies(draft.companies);
+        setCriteriaSetId(draft.criteriaSetId);
       }
     }
     setHydrated(true);
@@ -86,33 +75,19 @@ export function EvaluateForm({
   // Keep the draft in sync so it survives navigating to another page and back.
   useEffect(() => {
     if (!hydrated) return;
-    saveDraft({ company, criteria, activePreset });
-  }, [hydrated, company, criteria, activePreset]);
+    saveDraft({ companies, criteriaSetId });
+  }, [hydrated, companies, criteriaSetId]);
 
-  function mutateCriteria(next: CriterionForm[]) {
-    setCriteria(next);
-    setActivePreset(null);
-  }
-
-  function loadPreset(id: string) {
-    if (!id) return;
-    const preset = presets.find((p) => p.id === id);
-    if (!preset) return;
-    setCriteria(
-      preset.criteria.map((c) => ({
-        name: c.name,
-        description: c.description ?? "",
-        weight: String(c.weight),
-      }))
-    );
-    setActivePreset({ id: preset.id, name: preset.name });
-  }
+  const selectedCriteriaSet = criteriaSets.find((s) => s.id === criteriaSetId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const filled = filledCriteria(criteria);
-    if (filled.length === 0) {
-      setError("Add at least one criterion with a name.");
+    if (companies.length === 0) {
+      setError("Add at least one company.");
+      return;
+    }
+    if (!criteriaSetId) {
+      setError("Choose a criteria set.");
       return;
     }
     setLoading(true);
@@ -121,20 +96,11 @@ export function EvaluateForm({
       const res = await fetch("/api/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company,
-          criteria: filled.map((c) => ({
-            name: c.name,
-            description: c.description.trim() || undefined,
-            weight: Number(c.weight),
-          })),
-          presetId: activePreset?.id,
-          presetName: activePreset?.name,
-        }),
+        body: JSON.stringify({ companies, criteriaSetId }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Evaluation failed");
-      onResult(body.record as EvaluationRecord);
+      onResult(body.results as EvaluateResult[]);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -145,60 +111,42 @@ export function EvaluateForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border border-border bg-surface p-6 sm:p-8">
       <div className="mb-6">
-        <label className="mb-1 block text-sm font-medium text-ink-secondary">Company name</label>
-        <input
-          type="text"
-          required
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-          placeholder="e.g. Tesla"
-          className="w-full rounded-md border border-border bg-page px-3 py-2 text-sm text-ink-primary outline-none focus:border-ink-muted"
-        />
+        <label className="mb-1 block text-sm font-medium text-ink-secondary">Companies</label>
+        <CompanyTagInput companies={companies} onChange={setCompanies} />
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-ink-secondary">Preset:</label>
-        <select
-          value={activePreset?.id ?? ""}
-          onChange={(e) => loadPreset(e.target.value)}
-          className="rounded-md border border-border bg-page px-2 py-1.5 text-sm text-ink-primary outline-none focus:border-ink-muted"
-        >
-          <option value="">Custom (unsaved)</option>
-          {presets.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+      <div className="mb-6">
+        <div className="mb-2 flex flex-wrap items-center gap-3">
+          <label className="text-sm font-medium text-ink-secondary">Criteria set:</label>
+          <select
+            value={criteriaSetId ?? ""}
+            onChange={(e) => setCriteriaSetId(e.target.value || null)}
+            className="rounded-md border border-border bg-page px-2 py-1.5 text-sm text-ink-primary outline-none focus:border-ink-muted"
+          >
+            <option value="" disabled>
+              Choose a criteria set...
             </option>
-          ))}
-        </select>
-        {activePreset && (
-          <span className="text-xs text-ink-muted">using &ldquo;{activePreset.name}&rdquo;</span>
-        )}
-        <Link href="/presets" className="text-xs text-ink-secondary hover:underline">
-          Manage presets
-        </Link>
-        <div className="ml-auto">
-          <SavePresetControl
-            criteria={filledCriteria(criteria).map((c) => ({
-              name: c.name,
-              description: c.description,
-              weight: Number(c.weight),
-            }))}
-            onSaved={(preset) => {
-              setPresets((prev) => [preset, ...prev]);
-              setActivePreset({ id: preset.id, name: preset.name });
-            }}
-          />
+            {criteriaSets.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <Link href="/criteria" className="text-xs text-ink-secondary hover:underline">
+            Edit criteria sets
+          </Link>
         </div>
+        {selectedCriteriaSet && <CriteriaSetPreview criteriaSet={selectedCriteriaSet} />}
       </div>
-
-      <CriteriaEditor criteria={criteria} onChange={mutateCriteria} />
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 w-full rounded-md bg-good px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+        className="w-full rounded-md bg-good px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
       >
-        {loading ? `Researching ${company || "company"}...` : "Run evaluation"}
+        {loading
+          ? `Evaluating ${companies.length} compan${companies.length === 1 ? "y" : "ies"}...`
+          : `Run evaluation${companies.length === 1 ? "" : companies.length > 1 ? "s" : ""}`}
       </button>
       {error && <p className="mt-3 text-sm text-critical">{error}</p>}
     </form>

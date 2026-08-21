@@ -2,12 +2,9 @@ import Link from "next/link";
 import type { EvaluationRecord } from "@/lib/scoring/schema";
 import { Meter } from "./Meter";
 import { StatusChip } from "./StatusChip";
-import { SavePresetControl } from "./SavePresetControl";
 import { pct } from "./scoreStatus";
 
 export function ScoreReport({ record }: { record: EvaluationRecord }) {
-  const missingDescriptions = record.criteria.some((c) => !c.description);
-
   return (
     <div className="rounded-lg border border-border bg-surface p-6 sm:p-8">
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
@@ -15,25 +12,14 @@ export function ScoreReport({ record }: { record: EvaluationRecord }) {
         <div className="flex items-center gap-3 text-sm">
           <span className="text-ink-muted">{record.model}</span>
           <Link href={`/evaluate?rerunFrom=${record.id}`} className="text-ink-secondary hover:underline">
-            Re-run with different preset
+            Re-run
           </Link>
         </div>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-ink-secondary">Criteria breakdown</h3>
-        <SavePresetControl
-          criteria={record.criteria.map((c) => ({
-            name: c.name,
-            description: c.description,
-            weight: c.weight,
-          }))}
-          disabledReason={
-            missingDescriptions
-              ? "This evaluation was saved before criteria descriptions were stored, so it can't be turned into a preset."
-              : undefined
-          }
-        />
+        <span className="text-xs text-ink-muted">{record.criteriaSetName}</span>
       </div>
       <div className="mb-8 divide-y divide-gridline border-y border-gridline">
         {record.criteria.map((c) => (

@@ -8,8 +8,8 @@ export interface EvaluateParams {
   company: string;
   criteria: CriterionInput[];
   model?: string;
-  presetId?: string;
-  presetName?: string;
+  criteriaSetId: string;
+  criteriaSetName: string;
 }
 
 export async function evaluateCompany({
@@ -17,8 +17,8 @@ export async function evaluateCompany({
   company,
   criteria,
   model = DEFAULT_MODEL,
-  presetId,
-  presetName,
+  criteriaSetId,
+  criteriaSetName,
 }: EvaluateParams): Promise<EvaluationRecord> {
   const system = buildSystemPrompt();
   const userPrompt = buildUserPrompt(company, criteria);
@@ -57,7 +57,7 @@ export async function evaluateCompany({
     criteria: criteriaResults,
     overallScore: Math.round(overallScore * 10000) / 10000,
     overallSummary: modelEvaluation.overall_summary,
-    presetId,
-    presetName,
+    criteriaSetId,
+    criteriaSetName,
   };
 }

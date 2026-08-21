@@ -65,11 +65,9 @@ export function EvaluationList({
                 {new Date(record.createdAt).toLocaleString()}
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                {record.presetName && (
-                  <span className="rounded-full bg-page px-2 py-0.5 text-xs font-medium text-ink-secondary">
-                    {record.presetName}
-                  </span>
-                )}
+                <span className="rounded-full bg-page px-2 py-0.5 text-xs font-medium text-ink-secondary">
+                  {record.criteriaSetName}
+                </span>
                 {record.criteria.map((c) => (
                   <span
                     key={c.name}

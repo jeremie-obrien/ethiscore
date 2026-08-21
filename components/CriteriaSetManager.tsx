@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { EvaluationRecord, Preset } from "@/lib/scoring/schema";
+import type { EvaluationRecord, CriteriaSet } from "@/lib/scoring/schema";
 import { parseCsv } from "@/lib/csv";
 import { CriteriaEditor, emptyCriterion, filledCriteria, type CriterionForm } from "./CriteriaEditor";
+import { EditGateModal } from "./EditGateModal";
 
 /** Expects a header row, then "Criterion name","Criterion description","Criterion weight" per row. */
 function criteriaFromCsv(text: string): CriterionForm[] {
@@ -21,8 +22,8 @@ function criteriaFromCsv(text: string): CriterionForm[] {
     .filter((c) => c.name.length > 0);
 }
 
-function toCriteriaForm(preset: Preset): CriterionForm[] {
-  return preset.criteria.map((c) => ({
+function toCriteriaForm(set: CriteriaSet): CriterionForm[] {
+  return set.criteria.map((c) => ({
     name: c.name,
     description: c.description ?? "",
     weight: String(c.weight),
@@ -37,15 +38,18 @@ function toApiCriteria(criteria: CriterionForm[]) {
   }));
 }
 
-export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) {
-  const [presets, setPresets] = useState<Preset[]>(initialPresets);
+export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSets: CriteriaSet[] }) {
+  const [criteriaSets, setCriteriaSets] = useState<CriteriaSet[]>(initialCriteriaSets);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editCriteria, setEditCriteria] = useState<CriterionForm[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [rerunSuggestion, setRerunSuggestion] = useState<{ presetId: string; count: number } | null>(null);
+  const [editGate, setEditGate] = useState<{
+    criteriaSetId: string;
+    staleEvaluations: { id: string; company: string; createdAt: string }[];
+  } | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -74,10 +78,10 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     }
   }
 
-  function startEdit(preset: Preset) {
-    setEditingId(preset.id);
-    setEditName(preset.name);
-    setEditCriteria(toCriteriaForm(preset));
+  function startEdit(set: CriteriaSet) {
+    setEditingId(set.id);
+    setEditName(set.name);
+    setEditCriteria(toCriteriaForm(set));
     setConfirmDeleteId(null);
     setError(null);
   }
@@ -88,7 +92,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
 
   async function saveEdit(id: string) {
     if (editName.trim().length === 0) {
-      setError("Preset name can't be empty.");
+      setError("Criteria set name can't be empty.");
       return;
     }
     const criteria = toApiCriteria(editCriteria);
@@ -98,27 +102,26 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     }
     setBusyId(id);
     setError(null);
-    setRerunSuggestion(null);
     try {
-      const res = await fetch(`/api/presets/${id}`, {
+      const res = await fetch(`/api/criteria-sets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: editName.trim(), criteria }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Failed to update preset");
-      setPresets((prev) => prev.map((p) => (p.id === id ? (body.preset as Preset) : p)));
+      if (!res.ok) throw new Error(body.error ?? "Failed to update criteria set");
+      setCriteriaSets((prev) => prev.map((s) => (s.id === id ? (body.criteriaSet as CriteriaSet) : s)));
       setEditingId(null);
 
       try {
         const evalRes = await fetch("/api/evaluations");
         const evalBody = await evalRes.json();
-        const count = ((evalBody.evaluations ?? []) as EvaluationRecord[]).filter(
-          (e) => e.presetId === id
-        ).length;
-        if (count > 0) setRerunSuggestion({ presetId: id, count });
+        const stale = ((evalBody.evaluations ?? []) as EvaluationRecord[])
+          .filter((e) => e.criteriaSetId === id)
+          .map((e) => ({ id: e.id, company: e.company, createdAt: e.createdAt }));
+        if (stale.length > 0) setEditGate({ criteriaSetId: id, staleEvaluations: stale });
       } catch {
-        // non-critical — just skip the suggestion if this fails
+        // non-critical — if this fails the stale evaluations just won't be caught here
       }
     } catch (err) {
       setError((err as Error).message);
@@ -131,10 +134,10 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     setBusyId(id);
     setError(null);
     try {
-      const res = await fetch(`/api/presets/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/criteria-sets/${id}`, { method: "DELETE" });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Failed to delete preset");
-      setPresets((prev) => prev.filter((p) => p.id !== id));
+      if (!res.ok) throw new Error(body.error ?? "Failed to delete criteria set");
+      setCriteriaSets((prev) => prev.filter((s) => s.id !== id));
       setConfirmDeleteId(null);
     } catch (err) {
       setError((err as Error).message);
@@ -143,21 +146,21 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     }
   }
 
-  async function toggleDefault(preset: Preset) {
-    const nextIsDefault = !preset.isDefault;
-    setBusyId(preset.id);
+  async function toggleDefault(set: CriteriaSet) {
+    const nextIsDefault = !set.isDefault;
+    setBusyId(set.id);
     setError(null);
     try {
-      const res = await fetch(`/api/presets/${preset.id}/default`, {
+      const res = await fetch(`/api/criteria-sets/${set.id}/default`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isDefault: nextIsDefault }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Failed to update default preset");
-      setPresets((prev) =>
-        prev.map((p) =>
-          nextIsDefault ? { ...p, isDefault: p.id === preset.id } : p.id === preset.id ? { ...p, isDefault: false } : p
+      if (!res.ok) throw new Error(body.error ?? "Failed to update default criteria set");
+      setCriteriaSets((prev) =>
+        prev.map((s) =>
+          nextIsDefault ? { ...s, isDefault: s.id === set.id } : s.id === set.id ? { ...s, isDefault: false } : s
         )
       );
     } catch (err) {
@@ -169,7 +172,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
 
   async function handleCreate() {
     if (newName.trim().length === 0) {
-      setError("Preset name can't be empty.");
+      setError("Criteria set name can't be empty.");
       return;
     }
     const criteria = toApiCriteria(newCriteria);
@@ -180,14 +183,14 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
     setCreatingBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/presets", {
+      const res = await fetch("/api/criteria-sets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim(), criteria }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Failed to create preset");
-      setPresets((prev) => [body.preset as Preset, ...prev]);
+      if (!res.ok) throw new Error(body.error ?? "Failed to create criteria set");
+      setCriteriaSets((prev) => [body.criteriaSet as CriteriaSet, ...prev]);
       setCreating(false);
       setNewName("");
       setNewCriteria([{ ...emptyCriterion }]);
@@ -205,7 +208,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
       <div className="rounded-lg border border-border bg-surface p-6">
         {creating ? (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-secondary">Preset name</label>
+            <label className="mb-1 block text-sm font-medium text-ink-secondary">Criteria set name</label>
             <input
               type="text"
               autoFocus
@@ -222,7 +225,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
                 disabled={creatingBusy}
                 className="rounded-md bg-good px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
-                {creatingBusy ? "Saving..." : "Save preset"}
+                {creatingBusy ? "Saving..." : "Save criteria set"}
               </button>
               <button
                 type="button"
@@ -240,7 +243,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
               onClick={() => setCreating(true)}
               className="flex-1 rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
             >
-              + New preset (manual)
+              + New criteria set (manual)
             </button>
             <button
               type="button"
@@ -267,17 +270,15 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
         />
       </div>
 
-      {presets.length === 0 && (
-        <p className="text-sm text-ink-secondary">
-          No presets saved yet. Create one above, or save one from the evaluate form.
-        </p>
+      {criteriaSets.length === 0 && (
+        <p className="text-sm text-ink-secondary">No criteria sets yet. Create one above.</p>
       )}
 
-      {presets.map((preset) => (
-        <div key={preset.id} className="rounded-lg border border-border bg-surface p-6">
-          {editingId === preset.id ? (
+      {criteriaSets.map((set) => (
+        <div key={set.id} className="rounded-lg border border-border bg-surface p-6">
+          {editingId === set.id ? (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-secondary">Preset name</label>
+              <label className="mb-1 block text-sm font-medium text-ink-secondary">Criteria set name</label>
               <input
                 type="text"
                 value={editName}
@@ -288,11 +289,11 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
               <div className="mt-4 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => saveEdit(preset.id)}
-                  disabled={busyId === preset.id}
+                  onClick={() => saveEdit(set.id)}
+                  disabled={busyId === set.id}
                   className="rounded-md bg-good px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
-                  {busyId === preset.id ? "Saving..." : "Save changes"}
+                  {busyId === set.id ? "Saving..." : "Save changes"}
                 </button>
                 <button type="button" onClick={cancelEdit} className="text-sm text-ink-secondary hover:underline">
                   Cancel
@@ -303,30 +304,30 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink-primary">{preset.name}</span>
-                  {preset.isDefault && (
+                  <span className="font-medium text-ink-primary">{set.name}</span>
+                  {set.isDefault && (
                     <span className="rounded-full bg-good px-2 py-0.5 text-xs font-medium text-white">Default</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <button
                     type="button"
-                    onClick={() => toggleDefault(preset)}
-                    disabled={busyId === preset.id}
+                    onClick={() => toggleDefault(set)}
+                    disabled={busyId === set.id}
                     className="text-ink-secondary hover:underline disabled:opacity-50"
                   >
-                    {preset.isDefault ? "Unset default" : "Set as default"}
+                    {set.isDefault ? "Unset default" : "Set as default"}
                   </button>
-                  <button type="button" onClick={() => startEdit(preset)} className="text-ink-secondary hover:underline">
+                  <button type="button" onClick={() => startEdit(set)} className="text-ink-secondary hover:underline">
                     Edit
                   </button>
-                  {confirmDeleteId === preset.id ? (
+                  {confirmDeleteId === set.id ? (
                     <span className="flex items-center gap-2">
                       <span className="text-ink-muted">Delete?</span>
                       <button
                         type="button"
-                        onClick={() => handleDelete(preset.id)}
-                        disabled={busyId === preset.id}
+                        onClick={() => handleDelete(set.id)}
+                        disabled={busyId === set.id}
                         className="font-medium text-critical hover:underline disabled:opacity-50"
                       >
                         Confirm
@@ -342,7 +343,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setConfirmDeleteId(preset.id)}
+                      onClick={() => setConfirmDeleteId(set.id)}
                       className="text-critical hover:underline"
                     >
                       Delete
@@ -351,7 +352,7 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
                 </div>
               </div>
               <div className="mb-4 flex flex-wrap gap-1">
-                {preset.criteria.map((c) => (
+                {set.criteria.map((c) => (
                   <span
                     key={c.name}
                     className="rounded-full border border-gridline px-2 py-0.5 text-xs text-ink-secondary"
@@ -362,25 +363,24 @@ export function PresetManager({ initialPresets }: { initialPresets: Preset[] }) 
               </div>
               <div className="flex justify-end">
                 <Link
-                  href={`/evaluate?preset=${preset.id}`}
+                  href={`/evaluate?criteriaSet=${set.id}`}
                   className="inline-block rounded-md bg-good px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
                 >
-                  New evaluation with this preset
+                  New evaluation with this criteria set
                 </Link>
               </div>
-              {rerunSuggestion?.presetId === preset.id && (
-                <p className="mt-3 text-sm text-ink-secondary">
-                  {rerunSuggestion.count} past evaluation{rerunSuggestion.count === 1 ? "" : "s"} used
-                  this preset before the edit.{" "}
-                  <Link href={`/history?preset=${preset.id}`} className="font-medium text-ink-primary hover:underline">
-                    Review and re-run them →
-                  </Link>
-                </p>
-              )}
             </div>
           )}
         </div>
       ))}
+
+      {editGate && (
+        <EditGateModal
+          criteriaSetId={editGate.criteriaSetId}
+          staleEvaluations={editGate.staleEvaluations}
+          onDone={() => setEditGate(null)}
+        />
+      )}
     </div>
   );
 }

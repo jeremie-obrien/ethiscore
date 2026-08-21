@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/evaluate", label: "New evaluation" },
   { href: "/history", label: "Past evaluations" },
-  { href: "/presets", label: "Criteria management" },
+  { href: "/criteria", label: "Criteria management" },
 ];
 
 export function NavBar() {

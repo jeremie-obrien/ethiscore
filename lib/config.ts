@@ -43,6 +43,6 @@ export function getEvaluationsDir(): string {
   return path.join(CONFIG_DIR, "evaluations");
 }
 
-export function getPresetsDir(): string {
-  return path.join(CONFIG_DIR, "presets");
+export function getCriteriaSetsDir(): string {
+  return path.join(CONFIG_DIR, "criteria-sets");
 }

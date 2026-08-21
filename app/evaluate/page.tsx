@@ -1,44 +1,41 @@
 import { getApiKey } from "@/lib/config";
-import { findPreset, listPresets } from "@/lib/storage/presets";
+import { findCriteriaSet, listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { findEvaluation } from "@/lib/storage/store";
 import { EvaluateClient } from "@/components/EvaluateClient";
-import type { CriterionForm } from "@/components/CriteriaEditor";
 
 export default async function EvaluatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ rerunFrom?: string; preset?: string; reset?: string }>;
+  searchParams: Promise<{ rerunFrom?: string; criteriaSet?: string; reset?: string }>;
 }) {
-  const { rerunFrom, preset: presetIdParam, reset } = await searchParams;
-  const [apiKey, presets, rerunEntry, explicitPreset] = await Promise.all([
+  const { rerunFrom, criteriaSet: criteriaSetIdParam, reset } = await searchParams;
+  const [apiKey, criteriaSets, rerunEntry, explicitCriteriaSet] = await Promise.all([
     getApiKey(),
-    listPresets(),
+    listCriteriaSets(),
     rerunFrom ? findEvaluation(rerunFrom) : Promise.resolve(undefined),
-    presetIdParam ? findPreset(presetIdParam) : Promise.resolve(undefined),
+    criteriaSetIdParam ? findCriteriaSet(criteriaSetIdParam) : Promise.resolve(undefined),
   ]);
-  const defaultPreset = presets.find((p) => p.isDefault);
-  const chosenPreset = explicitPreset ?? defaultPreset;
+  const defaultCriteriaSet = criteriaSets.find((s) => s.isDefault);
+  const rerunCriteriaSet = rerunEntry
+    ? criteriaSets.find((s) => s.id === rerunEntry.record.criteriaSetId)
+    : undefined;
+  const chosenCriteriaSet = explicitCriteriaSet ?? rerunCriteriaSet ?? defaultCriteriaSet;
 
-  const initialCriteria: CriterionForm[] | undefined = chosenPreset?.criteria.map((c) => ({
-    name: c.name,
-    description: c.description ?? "",
-    weight: String(c.weight),
-  }));
-  const initialActivePreset = chosenPreset ? { id: chosenPreset.id, name: chosenPreset.name } : null;
+  const initialCompanies = rerunEntry ? [rerunEntry.record.company] : undefined;
+  const initialCriteriaSetId = chosenCriteriaSet?.id ?? null;
 
   // An explicit context (re-running a past evaluation, picking a specific
-  // preset, or an explicit "start fresh" link) always wins over a stale
+  // criteria set, or an explicit "start fresh" link) always wins over a stale
   // in-progress draft from browsing away and back.
-  const skipDraft = Boolean(rerunEntry) || Boolean(explicitPreset) || reset !== undefined;
+  const skipDraft = Boolean(rerunEntry) || Boolean(explicitCriteriaSet) || reset !== undefined;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <h1 className="mb-8 text-2xl font-semibold text-ink-primary">New evaluation</h1>
       <EvaluateClient
         initialHasApiKey={Boolean(apiKey)}
-        initialCriteria={initialCriteria}
-        initialActivePreset={initialActivePreset}
-        initialCompany={rerunEntry?.record.company}
+        initialCompanies={initialCompanies}
+        initialCriteriaSetId={initialCriteriaSetId}
         rerunFrom={rerunEntry ? { id: rerunEntry.record.id, company: rerunEntry.record.company } : undefined}
         skipDraft={skipDraft}
       />

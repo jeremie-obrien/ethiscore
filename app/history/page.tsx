@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { listEvaluations, sortEvaluationRecords, type EvaluationSort } from "@/lib/storage/store";
-import { listPresets } from "@/lib/storage/presets";
+import { listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { EvaluationList } from "@/components/EvaluationList";
 import { SortSelect } from "@/components/SortSelect";
-import { PresetFilterSelect } from "@/components/PresetFilterSelect";
+import { CriteriaSetFilterSelect } from "@/components/CriteriaSetFilterSelect";
 
 function isValidSort(value: string | undefined): value is EvaluationSort {
   return value === "date" || value === "score";
@@ -12,19 +12,21 @@ function isValidSort(value: string | undefined): value is EvaluationSort {
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; preset?: string }>;
+  searchParams: Promise<{ sort?: string; criteriaSet?: string }>;
 }) {
-  const { sort: rawSort, preset: presetId } = await searchParams;
+  const { sort: rawSort, criteriaSet: criteriaSetId } = await searchParams;
   const sort: EvaluationSort = isValidSort(rawSort) ? rawSort : "score";
 
-  const [entries, presets] = await Promise.all([listEvaluations(), listPresets()]);
+  const [entries, criteriaSets] = await Promise.all([listEvaluations(), listCriteriaSets()]);
   const allEvaluations = entries.map((e) => e.record);
-  const filtered = presetId
-    ? allEvaluations.filter((r) => r.presetId === presetId)
+  const filtered = criteriaSetId
+    ? allEvaluations.filter((r) => r.criteriaSetId === criteriaSetId)
     : allEvaluations;
   const evaluations = sortEvaluationRecords(filtered, sort);
 
-  const activePresetName = presetId ? presets.find((p) => p.id === presetId)?.name : undefined;
+  const activeCriteriaSetName = criteriaSetId
+    ? criteriaSets.find((s) => s.id === criteriaSetId)?.name
+    : undefined;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
@@ -39,20 +41,20 @@ export default async function HistoryPage({
           <span className="text-ink-secondary">Rank by</span>
           <SortSelect value={sort} />
         </div>
-        {presets.length > 0 && (
+        {criteriaSets.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-ink-secondary">Preset</span>
-            <PresetFilterSelect value={presetId ?? ""} presets={presets} />
+            <span className="text-ink-secondary">Criteria set</span>
+            <CriteriaSetFilterSelect value={criteriaSetId ?? ""} criteriaSets={criteriaSets} />
           </div>
         )}
       </div>
       <EvaluationList
-        key={`${sort}-${presetId ?? "all"}`}
+        key={`${sort}-${criteriaSetId ?? "all"}`}
         evaluations={evaluations}
         showRank={sort === "score"}
         emptyMessage={
-          presetId ? (
-            <>No evaluations match the &ldquo;{activePresetName ?? "selected"}&rdquo; preset.</>
+          criteriaSetId ? (
+            <>No evaluations match the &ldquo;{activeCriteriaSetName ?? "selected"}&rdquo; criteria set.</>
           ) : undefined
         }
       />
