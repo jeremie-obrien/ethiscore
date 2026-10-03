@@ -1,55 +1,54 @@
-import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { getEvaluationsDir } from "../config";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { EvaluationRecordSchema, type EvaluationRecord } from "../scoring/schema";
+import { isUuid } from "./ids";
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+interface EvaluationRow {
+  id: string;
+  created_at: string;
+  company: string;
+  model: string;
+  criteria_set_id: string;
+  criteria_set_name: string;
+  criteria: EvaluationRecord["criteria"];
+  overall_score: number;
+  overall_summary: string;
 }
 
-function filenameFor(record: EvaluationRecord): string {
-  const stamp = record.createdAt.replace(/[:.]/g, "-");
-  return `${stamp}-${slugify(record.company)}.json`;
+function toRecord(row: EvaluationRow): EvaluationRecord {
+  return EvaluationRecordSchema.parse({
+    id: row.id,
+    createdAt: new Date(row.created_at).toISOString(),
+    company: row.company,
+    model: row.model,
+    criteria: row.criteria,
+    overallScore: row.overall_score,
+    overallSummary: row.overall_summary,
+    criteriaSetId: row.criteria_set_id,
+    criteriaSetName: row.criteria_set_name,
+  });
 }
 
-export async function saveEvaluation(record: EvaluationRecord): Promise<string> {
-  const dir = getEvaluationsDir();
-  await mkdir(dir, { recursive: true });
-  const filePath = path.join(dir, filenameFor(record));
-  await writeFile(filePath, JSON.stringify(record, null, 2), "utf8");
-  return filePath;
+/** Saved under the signed-in user (user_id defaults to auth.uid() in the database). */
+export async function saveEvaluation(supabase: SupabaseClient, record: EvaluationRecord): Promise<void> {
+  const { error } = await supabase.from("evaluations").insert({
+    id: record.id,
+    created_at: record.createdAt,
+    company: record.company,
+    model: record.model,
+    criteria_set_id: record.criteriaSetId,
+    criteria_set_name: record.criteriaSetName,
+    criteria: record.criteria,
+    overall_score: record.overallScore,
+    overall_summary: record.overallSummary,
+  });
+  if (error) throw error;
 }
 
-export interface EvaluationListEntry {
-  fileName: string;
-  filePath: string;
-  record: EvaluationRecord;
-}
-
-export async function listEvaluations(): Promise<EvaluationListEntry[]> {
-  const dir = getEvaluationsDir();
-  let fileNames: string[];
-  try {
-    fileNames = await readdir(dir);
-  } catch {
-    return [];
-  }
-
-  const entries: EvaluationListEntry[] = [];
-  for (const fileName of fileNames.filter((f) => f.endsWith(".json")).sort()) {
-    const filePath = path.join(dir, fileName);
-    try {
-      const raw = await readFile(filePath, "utf8");
-      const record = EvaluationRecordSchema.parse(JSON.parse(raw));
-      entries.push({ fileName, filePath, record });
-    } catch {
-      // skip unreadable/corrupt files
-    }
-  }
-  return entries;
+/** The signed-in user's evaluations only (row-level security filters out everyone else's). */
+export async function listEvaluations(supabase: SupabaseClient): Promise<EvaluationRecord[]> {
+  const { data, error } = await supabase.from("evaluations").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as EvaluationRow[]).map(toRecord);
 }
 
 export type EvaluationSort = "date" | "score";
@@ -68,16 +67,16 @@ export function sortEvaluationRecords(
   return sorted;
 }
 
-export async function findEvaluation(idOrFileName: string): Promise<EvaluationListEntry | undefined> {
-  const entries = await listEvaluations();
-  return entries.find(
-    (e) => e.record.id === idOrFileName || e.fileName === idOrFileName || e.fileName.startsWith(idOrFileName)
-  );
+export async function findEvaluation(supabase: SupabaseClient, id: string): Promise<EvaluationRecord | undefined> {
+  if (!isUuid(id)) return undefined;
+  const { data, error } = await supabase.from("evaluations").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? toRecord(data as EvaluationRow) : undefined;
 }
 
-export async function deleteEvaluation(id: string): Promise<boolean> {
-  const entry = await findEvaluation(id);
-  if (!entry) return false;
-  await unlink(entry.filePath);
-  return true;
+export async function deleteEvaluation(supabase: SupabaseClient, id: string): Promise<boolean> {
+  if (!isUuid(id)) return false;
+  const { data, error } = await supabase.from("evaluations").delete().eq("id", id).select("id");
+  if (error) throw error;
+  return data.length > 0;
 }

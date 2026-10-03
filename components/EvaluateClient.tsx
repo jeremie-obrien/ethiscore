@@ -1,28 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { EvaluateResult } from "@/lib/scoring/schema";
 import { ApiKeyForm } from "./ApiKeyForm";
+import { clearApiKey, loadApiKey, maskApiKey } from "./apiKeyStore";
 import { EvaluateForm } from "./EvaluateForm";
 import { ScoreReport } from "./ScoreReport";
 import { StatusChip } from "./StatusChip";
 import { pct } from "./scoreStatus";
 
 export function EvaluateClient({
-  initialHasApiKey,
   initialCompanies,
   initialCriteriaSetId,
   rerunFrom,
   skipDraft,
 }: {
-  initialHasApiKey: boolean;
   initialCompanies?: string[];
   initialCriteriaSetId?: string | null;
   rerunFrom?: { id: string; company: string };
   skipDraft?: boolean;
 }) {
-  const [hasApiKey, setHasApiKey] = useState(initialHasApiKey);
+  // undefined until mounted: the key lives in browser storage, which the server can't see.
+  const [apiKey, setApiKey] = useState<string | null | undefined>(undefined);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [results, setResults] = useState<EvaluateResult[] | null>(null);
   const [replaceChoice, setReplaceChoice] = useState<"pending" | "kept" | "replaced" | null>(null);
   const [replacing, setReplacing] = useState(false);
@@ -31,6 +32,16 @@ export function EvaluateClient({
     rerunFrom && results?.length === 1 && results[0].company.trim().toLowerCase() === rerunFrom.company.trim().toLowerCase()
       ? results[0]
       : undefined;
+
+  useEffect(() => {
+    setApiKey(loadApiKey());
+  }, []);
+
+  function handleForgetKey(reason?: string) {
+    clearApiKey();
+    setApiKey(null);
+    setApiKeyError(reason ?? null);
+  }
 
   function handleResult(next: EvaluateResult[]) {
     setResults(next);
@@ -53,15 +64,25 @@ export function EvaluateClient({
 
   return (
     <div className="flex flex-col gap-6">
-      {!hasApiKey ? (
-        <ApiKeyForm onSaved={() => setHasApiKey(true)} />
+      {apiKey === undefined ? null : apiKey === null ? (
+        <ApiKeyForm error={apiKeyError} onSaved={setApiKey} />
       ) : (
-        <EvaluateForm
+        <>
+          <p className="-mb-3 text-xs text-ink-muted">
+            Using your Anthropic key {maskApiKey(apiKey)} ·{" "}
+            <button type="button" onClick={() => handleForgetKey()} className="hover:underline">
+              Change or forget key
+            </button>
+          </p>
+          <EvaluateForm
+          apiKey={apiKey}
+          onInvalidApiKey={handleForgetKey}
           onResult={handleResult}
           initialCompanies={initialCompanies}
           initialCriteriaSetId={initialCriteriaSetId}
           skipDraft={skipDraft}
-        />
+          />
+        </>
       )}
 
       {results && (

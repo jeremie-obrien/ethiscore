@@ -1,12 +1,14 @@
 import { listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { listEvaluations } from "@/lib/storage/store";
 import { CriteriaSetManager } from "@/components/CriteriaSetManager";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function CriteriaPage() {
-  const [criteriaSets, entries] = await Promise.all([listCriteriaSets(), listEvaluations()]);
+  const supabase = await createClient();
+  const [criteriaSets, evaluations] = await Promise.all([listCriteriaSets(supabase), listEvaluations(supabase)]);
 
   const usageCounts = new Map<string, number>();
-  for (const { record } of entries) {
+  for (const record of evaluations) {
     usageCounts.set(record.criteriaSetId, (usageCounts.get(record.criteriaSetId) ?? 0) + 1);
   }
 
@@ -20,9 +22,9 @@ export default async function CriteriaPage() {
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <h1 className="mb-2 text-2xl font-semibold text-ink-primary">Criteria management</h1>
       <p className="mb-8 text-sm text-ink-secondary">
-        View, edit, and delete your criteria sets, and choose the one that pre-selects by default
-        when starting a new evaluation. Every evaluation is run against one of these sets — edit
-        one here to change how future evaluations under it are scored.
+        Create, edit, and delete your own criteria sets, and choose the one that pre-selects by
+        default when starting a new evaluation. Built-in sets are shared with everyone and can&rsquo;t
+        be edited — make a copy to customize one. Your own sets and evaluations are private to you.
       </p>
       <CriteriaSetManager initialCriteriaSets={sorted} />
     </main>

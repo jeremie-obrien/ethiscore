@@ -4,39 +4,64 @@ Scores a company against custom, weighted ethics criteria using Claude. Claude r
 company live via web search and returns a per-criterion breakdown plus a deterministic weighted
 overall score, with rationale and sources.
 
+It's a multi-user web app:
+
+- **Accounts:** visitors sign in with an emailed link (Supabase Auth, no passwords).
+- **Privacy:** each user's evaluations and criteria sets are private to them, enforced by
+  row-level security in the database (`supabase/migrations/`). Three built-in criteria sets
+  (ESG, Environment, Innovation) are shared read-only with everyone.
+- **Bring your own key:** each visitor supplies their own Anthropic API key. It stays in their
+  browser (sessionStorage, or localStorage if they tick "remember"), is sent with each
+  evaluation request, and is never stored or logged on the server.
+
 ## Setup
 
 ```
 npm install
 ```
 
-## Web UI
+### Supabase (one-time)
+
+1. Create a project at [supabase.com](https://supabase.com/dashboard).
+2. **SQL Editor → New query**: paste `supabase/migrations/0001_init.sql` and run it.
+3. **Authentication → URL Configuration**: set **Site URL** to the deployed address (e.g.
+   `https://ethiscore.vercel.app`), and add these to **Redirect URLs**:
+   - `http://localhost:3000/**`
+   - `https://ethiscore.vercel.app/**` (your deployed address)
+4. Copy `.env.example` to `.env.local` and fill in the Project URL and publishable/anon key.
+
+Supabase's built-in email sender is for testing only and is heavily rate-limited. Before
+inviting real users, set up custom SMTP under **Authentication → Emails → SMTP Settings**
+(e.g. Resend's free tier).
+
+## Run locally
 
 ```
 npm run dev
 ```
 
-Open `http://localhost:3000`. First run prompts you to set your Anthropic API key (saved to
-`~/.ethiscore/config.json`, mode 600 — never sent back to the browser). Fill in a company and
-your criteria and run the evaluation; results are saved automatically and browsable at
-`/history`.
+Open `http://localhost:3000`, sign in with your email, and add your Anthropic API key on the
+New evaluation page.
 
 `npm run build && npm start` runs the production build.
 
+## Deploy (Vercel)
+
+Import the GitHub repo in Vercel, add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` as
+environment variables, and deploy. Every push to `main` redeploys.
+
 ## Docker
+
+The app doesn't depend on Vercel-specific features, so it can move to any container host
+(Google Cloud Run, Fly.io, …):
 
 ```
 docker build -t ethiscore .
-docker run -p 3000:3000 -e ANTHROPIC_API_KEY=sk-ant-... ethiscore
+docker run -p 3000:3000 -e SUPABASE_URL=... -e SUPABASE_PUBLISHABLE_KEY=... ethiscore
 ```
 
-Open `http://localhost:3000`. The container never prompts for a key — pass it via
-`ANTHROPIC_API_KEY` (checked before any saved config file). Evaluation history lives at
-`/home/nextjs/.ethiscore` inside the container and is lost on removal unless you mount a volume:
-
-```
-docker run -p 3000:3000 -e ANTHROPIC_API_KEY=sk-ant-... -v ethiscore-data:/home/nextjs/.ethiscore ethiscore
-```
+The Supabase settings are read at runtime, so one image works against any project. Remember to
+add the new host's address to Supabase's Redirect URLs.
 
 ## Notes
 
@@ -46,5 +71,7 @@ docker run -p 3000:3000 -e ANTHROPIC_API_KEY=sk-ant-... -v ethiscore-data:/home/
   `overall = Π(score_i ^ normalizedWeight_i)`. Unlike a weighted average, this punishes a very
   low score on any single criterion much harder — a company that's excellent on two criteria
   but scores near 0 on the third still ends up with a low overall score.
-- Shared logic lives in `lib/` (framework-agnostic — evaluation, prompt-building, storage,
-  config), with `app/`/`components/` as the web layer on top of it.
+- Each company is evaluated in its own request (the browser loops over companies), so one
+  evaluation gets the server's full time limit (300s on Vercel Hobby).
+- Shared logic lives in `lib/` (evaluation, prompt-building, storage, Supabase access), with
+  `app/`/`components/` as the web layer on top of it.

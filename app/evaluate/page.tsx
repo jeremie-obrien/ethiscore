@@ -1,6 +1,6 @@
-import { getApiKey } from "@/lib/config";
 import { findCriteriaSet, listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { findEvaluation } from "@/lib/storage/store";
+import { createClient } from "@/lib/supabase/server";
 import { EvaluateClient } from "@/components/EvaluateClient";
 
 export default async function EvaluatePage({
@@ -9,19 +9,19 @@ export default async function EvaluatePage({
   searchParams: Promise<{ rerunFrom?: string; criteriaSet?: string; reset?: string }>;
 }) {
   const { rerunFrom, criteriaSet: criteriaSetIdParam, reset } = await searchParams;
-  const [apiKey, criteriaSets, rerunEntry, explicitCriteriaSet] = await Promise.all([
-    getApiKey(),
-    listCriteriaSets(),
-    rerunFrom ? findEvaluation(rerunFrom) : Promise.resolve(undefined),
-    criteriaSetIdParam ? findCriteriaSet(criteriaSetIdParam) : Promise.resolve(undefined),
+  const supabase = await createClient();
+  const [criteriaSets, rerunEntry, explicitCriteriaSet] = await Promise.all([
+    listCriteriaSets(supabase),
+    rerunFrom ? findEvaluation(supabase, rerunFrom) : Promise.resolve(undefined),
+    criteriaSetIdParam ? findCriteriaSet(supabase, criteriaSetIdParam) : Promise.resolve(undefined),
   ]);
   const defaultCriteriaSet = criteriaSets.find((s) => s.isDefault);
   const rerunCriteriaSet = rerunEntry
-    ? criteriaSets.find((s) => s.id === rerunEntry.record.criteriaSetId)
+    ? criteriaSets.find((s) => s.id === rerunEntry.criteriaSetId)
     : undefined;
   const chosenCriteriaSet = explicitCriteriaSet ?? rerunCriteriaSet ?? defaultCriteriaSet;
 
-  const initialCompanies = rerunEntry ? [rerunEntry.record.company] : undefined;
+  const initialCompanies = rerunEntry ? [rerunEntry.company] : undefined;
   const initialCriteriaSetId = chosenCriteriaSet?.id ?? null;
 
   // An explicit context (re-running a past evaluation, picking a specific
@@ -33,10 +33,9 @@ export default async function EvaluatePage({
     <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
       <h1 className="mb-8 text-2xl font-semibold text-ink-primary">New evaluation</h1>
       <EvaluateClient
-        initialHasApiKey={Boolean(apiKey)}
         initialCompanies={initialCompanies}
         initialCriteriaSetId={initialCriteriaSetId}
-        rerunFrom={rerunEntry ? { id: rerunEntry.record.id, company: rerunEntry.record.company } : undefined}
+        rerunFrom={rerunEntry ? { id: rerunEntry.id, company: rerunEntry.company } : undefined}
         skipDraft={skipDraft}
       />
     </main>

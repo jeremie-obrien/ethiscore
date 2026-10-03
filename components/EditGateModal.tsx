@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ApiKeyForm } from "./ApiKeyForm";
+import { clearApiKey, loadApiKey } from "./apiKeyStore";
 
 interface StaleEvaluation {
   id: string;
@@ -31,6 +33,13 @@ export function EditGateModal({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setApiKey(loadApiKey());
+  }, []);
+
+  const needsApiKey = !apiKey && staleEvaluations.some((e) => choices[e.id] === "rerun");
 
   function setAll(choice: RowChoice) {
     setChoices(Object.fromEntries(staleEvaluations.map((e) => [e.id, choice])));
@@ -51,14 +60,14 @@ export function EditGateModal({
           const res = await fetch("/api/evaluate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ companies: [evaluation.company], criteriaSetId }),
+            body: JSON.stringify({ company: evaluation.company, criteriaSetId, apiKey }),
           });
-          const body = await res.json();
-          if (!res.ok) throw new Error(body.error ?? `Failed to re-run evaluation for ${evaluation.company}`);
-          const result = (body.results ?? [])[0];
-          if (!result || result.error) {
-            throw new Error(result?.error ?? `Failed to re-run evaluation for ${evaluation.company}`);
+          const body = await res.json().catch(() => ({}));
+          if (body.code === "invalid_api_key") {
+            clearApiKey();
+            setApiKey(null);
           }
+          if (!res.ok) throw new Error(body.error ?? `Failed to re-run evaluation for ${evaluation.company}`);
           const delRes = await fetch(`/api/evaluations/${evaluation.id}`, { method: "DELETE" });
           if (!delRes.ok) throw new Error(`Re-ran ${evaluation.company} but failed to remove the old evaluation`);
         }
@@ -126,12 +135,18 @@ export function EditGateModal({
           ))}
         </div>
 
+        {needsApiKey && (
+          <div className="mt-4">
+            <ApiKeyForm onSaved={setApiKey} />
+          </div>
+        )}
+
         {error && <p className="mt-3 text-sm text-critical">{error}</p>}
 
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={busy}
+          disabled={busy || needsApiKey}
           className="mt-4 w-full rounded-md bg-good px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
         >
           {busy

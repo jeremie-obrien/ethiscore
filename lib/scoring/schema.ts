@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const CriterionInputSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
   weight: z.number().positive(),
 });
 export type CriterionInput = z.infer<typeof CriterionInputSchema>;
@@ -50,7 +50,9 @@ export const CriteriaSetSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   createdAt: z.string(),
-  criteria: z.array(CriterionInputSchema).min(1),
+  criteria: z.array(CriterionInputSchema).min(1).max(50),
   isDefault: z.boolean().default(false),
+  /** Shared with every user and read-only (seeded by supabase/migrations). */
+  builtIn: z.boolean().default(false),
 });
 export type CriteriaSet = z.infer<typeof CriteriaSetSchema>;

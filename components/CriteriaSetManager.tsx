@@ -86,6 +86,16 @@ export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSet
     setError(null);
   }
 
+  /** Built-in sets are read-only, so customizing one starts a new set from a copy of it. */
+  function startCopy(set: CriteriaSet) {
+    setNewName(`${set.name} (copy)`);
+    setNewCriteria(toCriteriaForm(set));
+    setCreating(true);
+    setEditingId(null);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function cancelEdit() {
     setEditingId(null);
   }
@@ -308,6 +318,11 @@ export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSet
                   {set.isDefault && (
                     <span className="rounded-full bg-good px-2 py-0.5 text-xs font-medium text-white">Default</span>
                   )}
+                  {set.builtIn && (
+                    <span className="rounded-full border border-gridline px-2 py-0.5 text-xs font-medium text-ink-secondary">
+                      Built-in
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <button
@@ -318,10 +333,16 @@ export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSet
                   >
                     {set.isDefault ? "Unset default" : "Set as default"}
                   </button>
-                  <button type="button" onClick={() => startEdit(set)} className="text-ink-secondary hover:underline">
-                    Edit
-                  </button>
-                  {confirmDeleteId === set.id ? (
+                  {set.builtIn ? (
+                    <button type="button" onClick={() => startCopy(set)} className="text-ink-secondary hover:underline">
+                      Make a copy
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => startEdit(set)} className="text-ink-secondary hover:underline">
+                      Edit
+                    </button>
+                  )}
+                  {set.builtIn ? null : confirmDeleteId === set.id ? (
                     <span className="flex items-center gap-2">
                       <span className="text-ink-muted">Delete?</span>
                       <button

@@ -15,14 +15,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# Explicit HOME so lib/config.ts's os.homedir()-based paths
-# (~/.ethiscore/config.json, ~/.ethiscore/evaluations/) are predictable.
-ENV HOME=/home/nextjs
-
+# All data lives in Supabase; SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are passed at runtime.
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 --ingroup nodejs --home /home/nextjs nextjs \
-  && mkdir -p /home/nextjs/.ethiscore \
-  && chown -R nextjs:nodejs /home/nextjs
+  && adduser --system --uid 1001 --ingroup nodejs nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

@@ -4,6 +4,7 @@ import { listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { EvaluationList } from "@/components/EvaluationList";
 import { SortSelect } from "@/components/SortSelect";
 import { CriteriaSetFilterSelect } from "@/components/CriteriaSetFilterSelect";
+import { createClient } from "@/lib/supabase/server";
 
 function isValidSort(value: string | undefined): value is EvaluationSort {
   return value === "date" || value === "score";
@@ -17,8 +18,11 @@ export default async function HistoryPage({
   const { sort: rawSort, criteriaSet: criteriaSetId } = await searchParams;
   const sort: EvaluationSort = isValidSort(rawSort) ? rawSort : "score";
 
-  const [entries, criteriaSets] = await Promise.all([listEvaluations(), listCriteriaSets()]);
-  const allEvaluations = entries.map((e) => e.record);
+  const supabase = await createClient();
+  const [allEvaluations, criteriaSets] = await Promise.all([
+    listEvaluations(supabase),
+    listCriteriaSets(supabase),
+  ]);
   const filtered = criteriaSetId
     ? allEvaluations.filter((r) => r.criteriaSetId === criteriaSetId)
     : allEvaluations;

@@ -31,11 +31,16 @@ function saveDraft(draft: EvaluateDraft) {
 }
 
 export function EvaluateForm({
+  apiKey,
+  onInvalidApiKey,
   onResult,
   initialCompanies,
   initialCriteriaSetId,
   skipDraft,
 }: {
+  apiKey: string;
+  /** Called when Anthropic rejects the key, so the parent can ask for a new one. */
+  onInvalidApiKey: (message: string) => void;
   onResult: (results: EvaluateResult[]) => void;
   initialCompanies?: string[];
   initialCriteriaSetId?: string | null;
@@ -43,7 +48,8 @@ export function EvaluateForm({
 }) {
   const [companies, setCompanies] = useState<string[]>(initialCompanies ?? []);
   const [criteriaSetId, setCriteriaSetId] = useState<string | null>(initialCriteriaSetId ?? null);
-  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const loading = progress !== null;
   const [error, setError] = useState<string | null>(null);
 
   const [criteriaSets, setCriteriaSets] = useState<CriteriaSet[]>([]);
@@ -90,22 +96,38 @@ export function EvaluateForm({
       setError("Choose a criteria set.");
       return;
     }
-    setLoading(true);
     setError(null);
-    try {
-      const res = await fetch("/api/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companies, criteriaSetId }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Evaluation failed");
-      onResult(body.results as EvaluateResult[]);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+    setProgress({ done: 0, total: companies.length });
+
+    // One request per company, so each evaluation gets the server's full time budget.
+    const results: EvaluateResult[] = [];
+    for (const company of companies) {
+      try {
+        const res = await fetch("/api/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company, criteriaSetId, apiKey }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (body.code === "invalid_api_key") {
+          setProgress(null);
+          onInvalidApiKey(body.error);
+          return;
+        }
+        if (!res.ok) throw new Error(body.error ?? "Evaluation failed");
+        results.push({ company, record: body.record });
+      } catch (err) {
+        results.push({ company, error: (err as Error).message });
+      }
+      setProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
     }
+
+    setProgress(null);
+    if (results.length === 1 && results[0].error) {
+      setError(results[0].error);
+      return;
+    }
+    onResult(results);
   }
 
   return (
@@ -144,8 +166,10 @@ export function EvaluateForm({
         disabled={loading}
         className="w-full rounded-md bg-good px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
       >
-        {loading
-          ? `Evaluating ${companies.length} compan${companies.length === 1 ? "y" : "ies"}...`
+        {progress
+          ? progress.total === 1
+            ? "Evaluating... (this can take a few minutes)"
+            : `Evaluating ${Math.min(progress.done + 1, progress.total)} of ${progress.total}...`
           : `Run evaluation${companies.length === 1 ? "" : companies.length > 1 ? "s" : ""}`}
       </button>
       {error && <p className="mt-3 text-sm text-critical">{error}</p>}
