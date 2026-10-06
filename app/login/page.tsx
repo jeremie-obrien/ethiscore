@@ -19,8 +19,8 @@ export default async function LoginPage({
     <main className="mx-auto max-w-md px-6 py-12 sm:py-16">
       <h1 className="mb-2 text-2xl font-semibold text-ink-primary">Sign in</h1>
       <p className="mb-8 text-sm text-ink-secondary">
-        Enter your email and we&rsquo;ll send you a sign-in link. No password needed — new accounts are
-        created automatically.
+        Enter your email and we&rsquo;ll send you a sign-in link and code. No password needed — new
+        accounts are created automatically.
       </p>
       {error && (
         <p className="mb-4 text-sm text-critical">

@@ -31,7 +31,9 @@ npm install
 4. **Authentication → Emails → Templates**: in both **Confirm signup** and **Magic Link**,
    replace `{{ .ConfirmationURL }}` with
    `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email`. With the default link format,
-   sign-in only works in the browser that requested the link.
+   sign-in only works in the browser that requested the link. Also include the one-time code,
+   e.g. `<p>Or enter this code on the sign-in page: <strong>{{ .Token }}</strong></p>`, so
+   people reading the email on another device can type it on the sign-in page.
 5. Copy `.env.example` to `.env.local` and fill in the Project URL and publishable/anon key.
 
 Supabase's built-in email sender is for testing only and is heavily rate-limited. Before
