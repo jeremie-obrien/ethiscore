@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/supabase/env";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -27,6 +28,13 @@ export default async function LoginPage({
         </p>
       )}
       <LoginForm next={next} />
+      <p className="mt-4 text-xs text-ink-muted">
+        We use your email only to sign you in. See{" "}
+        <Link href="/privacy" className="underline">
+          how we handle your data
+        </Link>
+        .
+      </p>
     </main>
   );
 }

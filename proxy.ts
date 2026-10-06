@@ -3,7 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 function isPublicPath(pathname: string): boolean {
-  return pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth/");
+  return (
+    pathname === "/" ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth/")
+  );
 }
 
 /**
