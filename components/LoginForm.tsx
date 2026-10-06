@@ -32,7 +32,7 @@ function CodeForm({ email, next }: { email: string; next: string }) {
           autoComplete="one-time-code"
           required
           maxLength={12}
-          placeholder="Code from the email"
+          placeholder="123456"
           className="flex-1 rounded-md border border-border bg-page px-3 py-2 text-sm tracking-widest text-ink-primary outline-none focus:border-ink-muted"
         />
         <button
