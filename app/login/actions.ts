@@ -20,11 +20,17 @@ export async function sendMagicLink(_prev: SendLinkState, formData: FormData): P
   // Server Actions already reject cross-site requests, so Origin is this site. Supabase
   // additionally only redirects to URLs on its allowlist (Authentication → URL Configuration).
   const origin = (await headers()).get("origin");
+  // Cloudflare Turnstile token from the form; Supabase verifies it when CAPTCHA protection is
+  // on (Authentication → Attack Protection), so a bot can't make us email arbitrary addresses.
+  const captchaToken = String(formData.get("captchaToken") ?? "") || undefined;
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${origin}/auth/confirm?next=${encodeURIComponent(next)}` },
+    options: { emailRedirectTo: `${origin}/auth/confirm?next=${encodeURIComponent(next)}`, captchaToken },
   });
+  if (error?.code === "captcha_failed") {
+    return { error: "The bot check didn't go through. Please wait for it to finish and try again." };
+  }
   if (error) return { error: error.message };
   return { sentTo: email };
 }
