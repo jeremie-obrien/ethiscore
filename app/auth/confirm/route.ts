@@ -4,9 +4,10 @@ import { safeNextPath } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Landing point for the emailed sign-in link. Supabase's default email template sends a
- * one-time `code` (must be opened in the browser that requested it); a customized template
- * can send `token_hash` + `type` instead, which works from any browser.
+ * Landing point for the emailed sign-in link. The "Confirm signup" and "Magic Link" email
+ * templates in Supabase link here with `token_hash` + `type` (see README), which works from
+ * any browser or device. Supabase's default templates send a one-time `code` instead, which
+ * only works in the browser that requested the link (it needs a cookie set at request time).
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -16,12 +17,22 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
 
   const supabase = await createClient();
-  let ok = false;
-  if (code) {
-    ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
-  } else if (tokenHash && type) {
-    ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
+  // Supabase adds error_code itself when it rejects the link before redirecting here.
+  let failure: string | null = searchParams.get("error_code") ?? (code || tokenHash ? null : "missing_token");
+  if (!failure && code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) failure = error.code ?? error.message;
+  } else if (!failure && tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (error) failure = error.code ?? error.message;
   }
 
-  return NextResponse.redirect(new URL(ok ? next : "/login?error=link", request.url));
+  if (failure) {
+    console.error(`Sign-in link rejected (${code ? "code" : tokenHash ? "token_hash" : "none"}): ${failure}`);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "link");
+    loginUrl.searchParams.set("reason", failure.slice(0, 100));
+    return NextResponse.redirect(loginUrl);
+  }
+  return NextResponse.redirect(new URL(next, request.url));
 }

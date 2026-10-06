@@ -28,7 +28,11 @@ npm install
    `https://ethiscore.vercel.app`), and add these to **Redirect URLs**:
    - `http://localhost:3000/**`
    - `https://ethiscore.vercel.app/**` (your deployed address)
-4. Copy `.env.example` to `.env.local` and fill in the Project URL and publishable/anon key.
+4. **Authentication → Emails → Templates**: in both **Confirm signup** and **Magic Link**,
+   replace `{{ .ConfirmationURL }}` with
+   `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email`. With the default link format,
+   sign-in only works in the browser that requested the link.
+5. Copy `.env.example` to `.env.local` and fill in the Project URL and publishable/anon key.
 
 Supabase's built-in email sender is for testing only and is heavily rate-limited. Before
 inviting real users, set up custom SMTP under **Authentication → Emails → SMTP Settings**

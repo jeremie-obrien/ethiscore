@@ -12,7 +12,7 @@ export function LoginForm({ next }: { next: string }) {
         <h2 className="mb-1 text-base font-medium text-ink-primary">Check your email</h2>
         <p className="text-sm text-ink-secondary">
           We sent a sign-in link to <span className="font-medium text-ink-primary">{state.sentTo}</span>. Open it
-          in this browser to finish signing in.
+          on any device to finish signing in.
         </p>
       </div>
     );
