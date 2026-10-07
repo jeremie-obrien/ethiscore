@@ -9,9 +9,6 @@ import {
 } from "@/app/login/actions";
 import { isTurnstileEnabled, Turnstile } from "./Turnstile";
 
-const inputClass =
-  "flex-1 rounded-md border border-border bg-page px-3 py-2 text-sm text-ink-primary outline-none focus:border-ink-muted";
-const buttonClass = "rounded-md bg-good px-4 py-2 text-sm font-medium text-white disabled:opacity-50";
 
 /**
  * Signs in with the one-time code from the email. With `email` it follows a request made
@@ -22,11 +19,11 @@ function CodeForm({ email, next, onBack }: { email?: string; next: string; onBac
   const [state, formAction, pending] = useActionState<VerifyCodeState, FormData>(verifyCode, {});
 
   return (
-    <form action={formAction} className="rounded-lg border border-border bg-surface p-6">
+    <form action={formAction} className="card p-6 sm:p-8">
       {email ? (
         <>
-          <h2 className="mb-1 text-base font-medium text-ink-primary">Check your email</h2>
-          <p className="mb-4 text-sm text-ink-secondary">
+          <h2 className="mb-1 text-lg font-semibold tracking-tight">Check your email</h2>
+          <p className="mb-6 text-sm text-ink-secondary">
             We sent an email to <span className="font-medium text-ink-primary">{email}</span>. Click the link
             in it, or, if you&rsquo;re reading it on another device, enter its code here to sign in on this one.
           </p>
@@ -34,12 +31,12 @@ function CodeForm({ email, next, onBack }: { email?: string; next: string; onBac
         </>
       ) : (
         <>
-          <h2 className="mb-1 text-base font-medium text-ink-primary">Enter your code</h2>
-          <p className="mb-4 text-sm text-ink-secondary">
+          <h2 className="mb-1 text-lg font-semibold tracking-tight">Enter your code</h2>
+          <p className="mb-6 text-sm text-ink-secondary">
             Already requested a sign-in email, here or on another device? Enter the address it was sent to and
             the code it contains.
           </p>
-          <label htmlFor="code-email" className="mb-1 block text-sm font-medium text-ink-secondary">
+          <label htmlFor="code-email" className="mb-1.5 block text-sm font-medium">
             Email
           </label>
           <input
@@ -49,15 +46,15 @@ function CodeForm({ email, next, onBack }: { email?: string; next: string; onBac
             required
             autoComplete="email"
             placeholder="you@example.com"
-            className={`${inputClass} mb-3 w-full`}
+            className="input mb-4"
           />
         </>
       )}
       <input type="hidden" name="next" value={next} />
-      <label htmlFor="code" className="mb-1 block text-sm font-medium text-ink-secondary">
+      <label htmlFor="code" className="mb-1.5 block text-sm font-medium">
         Code
       </label>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3">
         <input
           id="code"
           name="code"
@@ -67,16 +64,16 @@ function CodeForm({ email, next, onBack }: { email?: string; next: string; onBac
           required
           maxLength={12}
           placeholder="123456"
-          className={`${inputClass} tracking-widest`}
+          className="input h-12 text-center text-lg font-medium tracking-[0.4em]"
         />
-        <button type="submit" disabled={pending} className={buttonClass}>
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Checking..." : "Sign in"}
         </button>
       </div>
       {state.error && <p className="mt-2 text-sm text-critical">{state.error}</p>}
-      <p className="mt-4 text-xs text-ink-muted">
+      <p className="mt-5 text-center text-xs text-ink-muted">
         {email ? "No email? Check your spam folder, or " : "Need a new email? "}
-        <button type="button" onClick={onBack} className="underline">
+        <button type="button" onClick={onBack} className="underline underline-offset-2 hover:text-ink-primary">
           {email ? "start again" : "Request one"}
         </button>
         .
@@ -116,13 +113,13 @@ export function LoginForm({ next }: { next: string }) {
   const waitingForCaptcha = captchaEnabled && !captchaToken;
 
   return (
-    <form action={formAction} className="rounded-lg border border-border bg-surface p-6">
+    <form action={formAction} className="card p-6 sm:p-8">
       <input type="hidden" name="next" value={next} />
       <input type="hidden" name="captchaToken" value={captchaToken ?? ""} />
-      <label htmlFor="email" className="mb-1 block text-sm font-medium text-ink-secondary">
-        Email
+      <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+        Email address
       </label>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3">
         <input
           id="email"
           name="email"
@@ -130,19 +127,20 @@ export function LoginForm({ next }: { next: string }) {
           required
           autoComplete="email"
           placeholder="you@example.com"
-          className={inputClass}
+          className="input h-11"
         />
-        <button type="submit" disabled={pending || waitingForCaptcha} className={buttonClass}>
-          {pending ? "Sending..." : "Email me a sign-in link"}
+        {captchaEnabled && <Turnstile onToken={setCaptchaToken} resetKey={captchaResetKey} />}
+        <button type="submit" disabled={pending || waitingForCaptcha} className="btn btn-primary h-11 w-full">
+          {pending ? "Sending..." : waitingForCaptcha ? "Checking you're human..." : "Email me a sign-in link"}
         </button>
       </div>
-      {captchaEnabled && <Turnstile onToken={setCaptchaToken} resetKey={captchaResetKey} />}
-      {state.error && <p className="mt-2 text-sm text-critical">{state.error}</p>}
-      <p className="mt-4 text-xs text-ink-muted">
-        <button type="button" onClick={() => setMode("code")} className="underline">
-          Already have a code?
+      {state.error && <p className="mt-3 text-sm text-critical">{state.error}</p>}
+      <div className="mt-6 border-t border-gridline pt-5 text-center text-sm text-ink-secondary">
+        Already have a code?{" "}
+        <button type="button" onClick={() => setMode("code")} className="link">
+          Enter it here
         </button>
-      </p>
+      </div>
     </form>
   );
 }

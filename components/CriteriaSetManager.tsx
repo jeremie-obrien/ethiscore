@@ -215,61 +215,46 @@ export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSet
     <div className="flex flex-col gap-4">
       {error && <p className="text-sm text-critical">{error}</p>}
 
-      <div className="rounded-lg border border-border bg-surface p-6">
+      <div className={creating ? "card p-6 sm:p-8" : ""}>
         {creating ? (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-secondary">Criteria set name</label>
+            <h2 className="mb-5 text-lg font-semibold tracking-tight">New criteria set</h2>
+            <label className="mb-1.5 block text-sm font-medium">Name</label>
             <input
               type="text"
               autoFocus
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Consumer Goods"
-              className="mb-4 w-full rounded-md border border-border bg-page px-3 py-2 text-sm text-ink-primary outline-none focus:border-ink-muted"
+              placeholder="e.g. Consumer goods"
+              className="input mb-6"
             />
             <CriteriaEditor criteria={newCriteria} onChange={setNewCriteria} />
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={creatingBusy}
-                className="rounded-md bg-good px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {creatingBusy ? "Saving..." : "Save criteria set"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreating(false)}
-                className="text-sm text-ink-secondary hover:underline"
-              >
+            <div className="mt-6 flex items-center justify-end gap-2 border-t border-gridline pt-5">
+              <button type="button" onClick={() => setCreating(false)} className="btn btn-ghost">
                 Cancel
+              </button>
+              <button type="button" onClick={handleCreate} disabled={creatingBusy} className="btn btn-primary">
+                {creatingBusy ? "Saving..." : "Save criteria set"}
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="flex-1 rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
-            >
-              + New criteria set (manual)
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setCreating(true)} className="btn btn-primary">
+              New criteria set
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 rounded-md border border-dashed border-gridline px-4 py-2 text-sm font-medium text-ink-secondary hover:border-ink-muted"
+              className="btn btn-secondary"
               title='CSV columns: "Criterion name","Criterion description","Criterion weight"'
             >
-              Import CSV
+              Import from CSV
             </button>
+            <span className="text-xs text-ink-muted">
+              CSV: header row, then name, description, weight per row
+            </span>
           </div>
-        )}
-        {!creating && (
-          <p className="mt-2 text-xs text-ink-muted">
-            CSV format: header row, then one row per criterion — &ldquo;Criterion name&rdquo;,
-            &ldquo;Criterion description&rdquo;, &ldquo;Criterion weight&rdquo;.
-          </p>
         )}
         <input
           ref={fileInputRef}
@@ -284,116 +269,106 @@ export function CriteriaSetManager({ initialCriteriaSets }: { initialCriteriaSet
         <p className="text-sm text-ink-secondary">No criteria sets yet. Create one above.</p>
       )}
 
-      {criteriaSets.map((set) => (
-        <div key={set.id} className="rounded-lg border border-border bg-surface p-6">
+      {[
+        { title: "Your criteria sets", sets: criteriaSets.filter((x) => !x.builtIn) },
+        { title: "Built-in", sets: criteriaSets.filter((x) => x.builtIn) },
+      ].map((group) =>
+        group.sets.length === 0 ? null : (
+          <section key={group.title} className="mt-4 flex flex-col gap-3">
+            <h2 className="text-xs font-semibold tracking-wider text-ink-muted uppercase">{group.title}</h2>
+            {group.sets.map((set) => (
+        <div key={set.id} className="card p-6">
           {editingId === set.id ? (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-secondary">Criteria set name</label>
+              <label className="mb-1.5 block text-sm font-medium">Name</label>
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="mb-4 w-full rounded-md border border-border bg-page px-3 py-2 text-sm text-ink-primary outline-none focus:border-ink-muted"
+                className="input mb-6"
               />
               <CriteriaEditor criteria={editCriteria} onChange={setEditCriteria} />
-              <div className="mt-4 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => saveEdit(set.id)}
-                  disabled={busyId === set.id}
-                  className="rounded-md bg-good px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  {busyId === set.id ? "Saving..." : "Save changes"}
-                </button>
-                <button type="button" onClick={cancelEdit} className="text-sm text-ink-secondary hover:underline">
+              <div className="mt-6 flex items-center justify-end gap-2 border-t border-gridline pt-5">
+                <button type="button" onClick={cancelEdit} className="btn btn-ghost">
                   Cancel
+                </button>
+                <button type="button" onClick={() => saveEdit(set.id)} disabled={busyId === set.id} className="btn btn-primary">
+                  {busyId === set.id ? "Saving..." : "Save changes"}
                 </button>
               </div>
             </div>
           ) : (
             <div>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink-primary">{set.name}</span>
-                  {set.isDefault && (
-                    <span className="rounded-full bg-good px-2 py-0.5 text-xs font-medium text-white">Default</span>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">{set.name}</h3>
+                {set.isDefault && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Default</span>
+                )}
+                <span className="text-xs text-ink-muted">
+                  {set.criteria.length} criteri{set.criteria.length === 1 ? "on" : "a"}
+                </span>
+              </div>
+              <div className="mb-5 flex flex-wrap gap-1.5">
+                {set.criteria.map((c) => (
+                  <span key={c.name} className="rounded-md bg-subtle px-2 py-0.5 text-xs text-ink-secondary">
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gridline pt-4">
+                <div className="flex flex-wrap items-center gap-1">
+                  {set.builtIn ? (
+                    <button type="button" onClick={() => startCopy(set)} className="btn btn-ghost btn-sm">
+                      Make a copy
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => startEdit(set)} className="btn btn-ghost btn-sm">
+                      Edit
+                    </button>
                   )}
-                  {set.builtIn && (
-                    <span className="rounded-full border border-gridline px-2 py-0.5 text-xs font-medium text-ink-secondary">
-                      Built-in
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-sm">
                   <button
                     type="button"
                     onClick={() => toggleDefault(set)}
                     disabled={busyId === set.id}
-                    className="text-ink-secondary hover:underline disabled:opacity-50"
+                    className="btn btn-ghost btn-sm"
                   >
                     {set.isDefault ? "Unset default" : "Set as default"}
                   </button>
-                  {set.builtIn ? (
-                    <button type="button" onClick={() => startCopy(set)} className="text-ink-secondary hover:underline">
-                      Make a copy
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => startEdit(set)} className="text-ink-secondary hover:underline">
-                      Edit
-                    </button>
-                  )}
                   {set.builtIn ? null : confirmDeleteId === set.id ? (
-                    <span className="flex items-center gap-2">
-                      <span className="text-ink-muted">Delete?</span>
+                    <>
                       <button
                         type="button"
                         onClick={() => handleDelete(set.id)}
                         disabled={busyId === set.id}
-                        className="font-medium text-critical hover:underline disabled:opacity-50"
+                        className="btn btn-danger btn-sm"
                       >
-                        Confirm
+                        Delete set
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="text-ink-secondary hover:underline"
-                      >
+                      <button type="button" onClick={() => setConfirmDeleteId(null)} className="btn btn-ghost btn-sm">
                         Cancel
                       </button>
-                    </span>
+                    </>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(set.id)}
-                      className="text-critical hover:underline"
+                      className="btn btn-ghost btn-sm hover:text-critical"
                     >
                       Delete
                     </button>
                   )}
                 </div>
-              </div>
-              <div className="mb-4 flex flex-wrap gap-1">
-                {set.criteria.map((c) => (
-                  <span
-                    key={c.name}
-                    className="rounded-full border border-gridline px-2 py-0.5 text-xs text-ink-secondary"
-                  >
-                    {c.name}
-                  </span>
-                ))}
-              </div>
-              <div className="flex justify-end">
-                <Link
-                  href={`/evaluate?criteriaSet=${set.id}`}
-                  className="inline-block rounded-md bg-good px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-                >
-                  New evaluation with this criteria set
+                <Link href={`/evaluate?criteriaSet=${set.id}`} className="btn btn-secondary btn-sm">
+                  Evaluate with this set
                 </Link>
               </div>
             </div>
           )}
         </div>
-      ))}
+            ))}
+          </section>
+        )
+      )}
 
       {editGate && (
         <EditGateModal

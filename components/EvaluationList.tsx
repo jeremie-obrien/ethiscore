@@ -35,89 +35,69 @@ export function EvaluationList({
 
   if (evaluations.length === 0) {
     return (
-      <p className="text-sm text-ink-secondary">
-        {emptyMessage ?? (
-          <>
-            No evaluations saved yet.{" "}
-            <Link href="/evaluate?reset=1" className="hover:underline">
-              Run one
-            </Link>
-            .
-          </>
-        )}
-      </p>
+      <div className="card flex flex-col items-center px-6 py-14 text-center">
+        <p className="text-sm text-ink-secondary">{emptyMessage ?? "No evaluations yet."}</p>
+        <Link href="/evaluate?reset=1" className="btn btn-primary mt-4">
+          Run an evaluation
+        </Link>
+      </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gridline rounded-lg border border-border bg-surface">
+    <div className="card divide-y divide-gridline">
       {evaluations.map((record, i) => (
-        <div key={record.id} className="flex flex-wrap items-start justify-between gap-2 px-5 py-4 hover:bg-page">
-          <Link href={`/history/${record.id}`} className="flex min-w-0 flex-1 items-start gap-3">
-            {showRank && (
-              <span className="w-6 shrink-0 pt-0.5 text-right text-sm tabular-nums text-ink-muted">
-                {i + 1}
-              </span>
-            )}
-            <div className="min-w-0">
-              <div className="font-medium text-ink-primary">{record.company}</div>
-              <div className="text-xs text-ink-muted">
-                {new Date(record.createdAt).toLocaleString()}
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                <span className="rounded-full bg-page px-2 py-0.5 text-xs font-medium text-ink-secondary">
-                  {record.criteriaSetName}
-                </span>
-                {record.criteria.map((c) => (
-                  <span
-                    key={c.name}
-                    className="rounded-full border border-gridline px-2 py-0.5 text-xs text-ink-secondary"
-                  >
-                    {c.name}
-                  </span>
-                ))}
-              </div>
+        <div
+          key={record.id}
+          className="group flex items-center gap-4 px-5 py-3.5 transition first:rounded-t-xl last:rounded-b-xl hover:bg-subtle"
+        >
+          {showRank && (
+            <span className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-ink-muted">{i + 1}</span>
+          )}
+          <Link href={`/history/${record.id}`} className="min-w-0 flex-1">
+            <div className="truncate font-medium">{record.company}</div>
+            <div className="truncate text-xs text-ink-muted">
+              {record.criteriaSetName} · {new Date(record.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
             </div>
           </Link>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-3 pt-0.5">
-              <span className="text-sm tabular-nums text-ink-secondary">{pct(record.overallScore)}</span>
-              <StatusChip score={record.overallScore} />
-            </div>
-            <div className="flex items-center gap-3 text-xs">
-              <Link href={`/evaluate?rerunFrom=${record.id}`} className="text-ink-secondary hover:underline">
-                Re-run
-              </Link>
-              {confirmDeleteId === record.id ? (
-                <span className="flex items-center gap-2">
-                  <span className="text-ink-muted">Delete?</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(record.id)}
-                    disabled={busyId === record.id}
-                    className="font-medium text-critical hover:underline disabled:opacity-50"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteId(null)}
-                    className="text-ink-secondary hover:underline"
-                  >
-                    Cancel
-                  </button>
-                </span>
-              ) : (
+
+          <div className="hidden shrink-0 items-center gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 sm:flex">
+            {confirmDeleteId === record.id ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(record.id)}
+                  disabled={busyId === record.id}
+                  className="btn btn-danger btn-sm"
+                >
+                  {busyId === record.id ? "Deleting..." : "Delete"}
+                </button>
+                <button type="button" onClick={() => setConfirmDeleteId(null)} className="btn btn-ghost btn-sm">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href={`/evaluate?rerunFrom=${record.id}`} className="btn btn-ghost btn-sm">
+                  Re-run
+                </Link>
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteId(record.id)}
-                  className="text-critical hover:underline"
+                  className="btn btn-ghost btn-sm hover:text-critical"
                 >
                   Delete
                 </button>
-              )}
-            </div>
+              </>
+            )}
           </div>
+
+          <Link href={`/history/${record.id}`} className="flex shrink-0 items-center gap-3" tabIndex={-1}>
+            <span className="w-10 text-right text-sm font-semibold tabular-nums">{pct(record.overallScore)}</span>
+            <span className="hidden w-16 sm:block">
+              <StatusChip score={record.overallScore} />
+            </span>
+          </Link>
         </div>
       ))}
     </div>

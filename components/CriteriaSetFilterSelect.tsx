@@ -12,7 +12,7 @@ export function CriteriaSetFilterSelect({ value, criteriaSets }: { value: string
     <select
       value={value}
       onChange={(e) => router.push(withHistoryParam(searchParams, "criteriaSet", e.target.value))}
-      className="rounded-md border border-border bg-page px-2 py-1 text-sm text-ink-primary outline-none focus:border-ink-muted"
+      className="input h-9 w-auto pr-8"
     >
       <option value="">All criteria sets</option>
       {criteriaSets.map((s) => (

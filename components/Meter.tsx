@@ -6,13 +6,13 @@ export function Meter({ score, height = 10 }: { score: number; height?: number }
 
   return (
     <div
-      className="w-full rounded-sm bg-track overflow-hidden"
+      className="w-full overflow-hidden rounded-full bg-track"
       style={{ height }}
       role="img"
-      aria-label={`Score: ${(score * 100).toFixed(1)} out of 100`}
+      aria-label={`Score: ${Math.round(score * 100)} out of 100`}
     >
       <div
-        className={`h-full rounded-r-sm ${STATUS_BG_CLASS[status]}`}
+        className={`h-full rounded-full ${STATUS_BG_CLASS[status]}`}
         style={{ width: `${widthPct}%` }}
       />
     </div>

@@ -14,5 +14,5 @@ export function getSupabaseEnv(): { url: string; key: string } {
 
 /** Only allow same-site relative redirects, so a crafted ?next= can't send users elsewhere. */
 export function safeNextPath(value: unknown): string {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/evaluate";
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }

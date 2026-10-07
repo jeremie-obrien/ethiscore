@@ -84,9 +84,9 @@ export function EditGateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold text-ink-primary">Keep evaluations comparable</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="card max-h-[85vh] w-full max-w-lg overflow-y-auto p-6 shadow-xl">
+        <h2 className="text-lg font-semibold tracking-tight">Keep evaluations comparable</h2>
         <p className="mt-1 text-sm text-ink-secondary">
           {staleEvaluations.length} evaluation{staleEvaluations.length === 1 ? "" : "s"} used this criteria
           set before your edit. Re-run each one under the new criteria, or delete it — evaluations under
@@ -115,7 +115,7 @@ export function EditGateModal({
                   disabled={busy}
                   onClick={() => setChoices((prev) => ({ ...prev, [e.id]: "rerun" }))}
                   className={`rounded px-2 py-1 font-medium ${
-                    choices[e.id] === "rerun" ? "bg-good text-white" : "text-ink-secondary"
+                    choices[e.id] === "rerun" ? "bg-ink-primary text-page" : "text-ink-secondary"
                   }`}
                 >
                   Re-run
@@ -147,7 +147,7 @@ export function EditGateModal({
           type="button"
           onClick={handleConfirm}
           disabled={busy || needsApiKey}
-          className="mt-4 w-full rounded-md bg-good px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn btn-primary mt-5 w-full"
         >
           {busy
             ? `Working... ${progress ? `${progress.done}/${progress.total}` : ""}`

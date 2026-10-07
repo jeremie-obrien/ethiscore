@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy & legal notice · EthiScore",
+  title: "Privacy & legal notice",
 };
 
 // GDPR art. 13 and the French LCEN (mentions légales) require the person responsible for
@@ -12,7 +12,7 @@ const LAST_UPDATED = "6 October 2026";
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-2 text-lg font-semibold text-ink-primary">{title}</h2>
+      <h2 className="mb-2 text-lg font-semibold tracking-tight">{title}</h2>
       <div className="flex flex-col gap-3 text-sm leading-relaxed text-ink-secondary">{children}</div>
     </section>
   );
@@ -28,8 +28,8 @@ function Mail({ address }: { address: string }) {
 
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
-      <h1 className="mb-2 text-2xl font-semibold text-ink-primary">Privacy &amp; legal notice</h1>
+    <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">Privacy &amp; legal notice</h1>
       <p className="mb-10 text-sm text-ink-muted">Last updated: {LAST_UPDATED}</p>
 
       <Section title="In short">

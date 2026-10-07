@@ -2,6 +2,9 @@ import { findCriteriaSet, listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { findEvaluation } from "@/lib/storage/store";
 import { createClient } from "@/lib/supabase/server";
 import { EvaluateClient } from "@/components/EvaluateClient";
+import { PageHeader } from "@/components/PageHeader";
+
+export const metadata = { title: "New evaluation" };
 
 export default async function EvaluatePage({
   searchParams,
@@ -30,9 +33,13 @@ export default async function EvaluatePage({
   const skipDraft = Boolean(rerunEntry) || Boolean(explicitCriteriaSet) || reset !== undefined;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
-      <h1 className="mb-8 text-2xl font-semibold text-ink-primary">New evaluation</h1>
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <PageHeader
+        title={rerunEntry ? `Re-run ${rerunEntry.company}` : "New evaluation"}
+        description="Claude researches each company live on the web and scores it against your chosen criteria, with sources."
+      />
       <EvaluateClient
+        criteriaSets={criteriaSets}
         initialCompanies={initialCompanies}
         initialCriteriaSetId={initialCriteriaSetId}
         rerunFrom={rerunEntry ? { id: rerunEntry.id, company: rerunEntry.company } : undefined}

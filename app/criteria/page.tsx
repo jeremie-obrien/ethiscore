@@ -1,7 +1,10 @@
 import { listCriteriaSets } from "@/lib/storage/criteriaSets";
 import { listEvaluations } from "@/lib/storage/store";
 import { CriteriaSetManager } from "@/components/CriteriaSetManager";
+import { PageHeader } from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata = { title: "Criteria sets" };
 
 export default async function CriteriaPage() {
   const supabase = await createClient();
@@ -19,13 +22,11 @@ export default async function CriteriaPage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
-      <h1 className="mb-2 text-2xl font-semibold text-ink-primary">Criteria management</h1>
-      <p className="mb-8 text-sm text-ink-secondary">
-        Create, edit, and delete your own criteria sets, and choose the one that pre-selects by
-        default when starting a new evaluation. Built-in sets are shared with everyone and can&rsquo;t
-        be edited — make a copy to customize one. Your own sets and evaluations are private to you.
-      </p>
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <PageHeader
+        title="Criteria sets"
+        description="What companies are scored against. Built-in sets are shared and read-only: make a copy to customize one. Your own sets are private to you."
+      />
       <CriteriaSetManager initialCriteriaSets={sorted} />
     </main>
   );

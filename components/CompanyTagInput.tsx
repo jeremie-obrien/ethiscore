@@ -66,18 +66,18 @@ export function CompanyTagInput({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-page px-2 py-2">
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1.5 shadow-xs transition focus-within:border-accent focus-within:ring-3 focus-within:ring-accent/15">
         {companies.map((c, i) => (
           <span
             key={`${c}-${i}`}
-            className="flex items-center gap-1 rounded-full bg-track px-2.5 py-1 text-sm text-ink-primary"
+            className="flex items-center gap-1 rounded-md bg-subtle py-1 pr-1 pl-2.5 text-sm font-medium"
           >
             {c}
             <button
               type="button"
               onClick={() => removeAt(i)}
               aria-label={`Remove ${c}`}
-              className="text-ink-muted hover:text-critical"
+              className="flex h-5 w-5 items-center justify-center rounded text-ink-muted hover:bg-gridline hover:text-ink-primary"
             >
               ×
             </button>
@@ -90,19 +90,19 @@ export function CompanyTagInput({
           onKeyDown={handleKeyDown}
           onBlur={addFromDraft}
           placeholder={companies.length === 0 ? "e.g. Tesla — press Enter to add" : "Add another..."}
-          className="min-w-[10rem] flex-1 bg-transparent px-1 py-1 text-sm text-ink-primary outline-none placeholder:text-ink-muted"
+          className="min-w-[10rem] flex-1 bg-transparent px-1.5 py-1 text-sm outline-none placeholder:text-ink-muted"
         />
       </div>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="text-xs text-ink-secondary hover:underline"
+          className="font-medium text-ink-secondary underline-offset-2 hover:text-ink-primary hover:underline"
           title='CSV column: "Company name"'
         >
-          Import CSV
+          Import from CSV
         </button>
-        <span className="text-xs text-ink-muted">header row, then one company name per row</span>
+        <span>(header row, then one company name per row)</span>
       </div>
       {error && <p className="mt-1 text-xs text-critical">{error}</p>}
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleImportFile} className="hidden" />

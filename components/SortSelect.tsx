@@ -12,9 +12,9 @@ export function SortSelect({ value }: { value: EvaluationSort }) {
     <select
       value={value}
       onChange={(e) => router.push(withHistoryParam(searchParams, "sort", e.target.value))}
-      className="rounded-md border border-border bg-page px-2 py-1 text-sm text-ink-primary outline-none focus:border-ink-muted"
+      className="input h-9 w-auto pr-8"
     >
-      <option value="score">Top score</option>
+      <option value="score">Highest score</option>
       <option value="date">Newest</option>
     </select>
   );

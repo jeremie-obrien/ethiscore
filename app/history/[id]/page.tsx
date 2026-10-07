@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findEvaluation } from "@/lib/storage/store";
+import { DeleteEvaluationButton } from "@/components/DeleteEvaluationButton";
 import { ScoreReport } from "@/components/ScoreReport";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,11 +15,12 @@ export default async function HistoryDetailPage({
   if (!record) notFound();
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 sm:py-16">
-      <div className="mb-8">
-        <Link href="/history" className="text-sm text-ink-secondary hover:underline">
-          ← Back to history
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <Link href="/history" className="text-sm text-ink-secondary hover:text-ink-primary">
+          ← All evaluations
         </Link>
+        <DeleteEvaluationButton id={record.id} />
       </div>
       <ScoreReport record={record} />
     </main>

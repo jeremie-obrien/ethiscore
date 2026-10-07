@@ -88,5 +88,5 @@ export function Turnstile({ onToken, resetKey }: { onToken: (token: string | nul
     window.turnstile.reset(widgetIdRef.current);
   }, [resetKey]);
 
-  return <div ref={containerRef} className="mt-3 min-h-[65px]" />;
+  return <div ref={containerRef} className="min-h-[65px] [&_iframe]:!w-full" />;
 }
