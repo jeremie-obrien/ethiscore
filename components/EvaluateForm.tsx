@@ -88,6 +88,9 @@ interface Progress {
 
 export function EvaluateForm({
   apiKey,
+  freeRemaining = 0,
+  onFreeChanged,
+  disabled = false,
   criteriaSets,
   onInvalidApiKey,
   onResult,
@@ -95,7 +98,14 @@ export function EvaluateForm({
   initialCriteriaSetId,
   skipDraft,
 }: {
-  apiKey: string;
+  /** The visitor's own key, or null to use free evaluations. */
+  apiKey: string | null;
+  /** Free evaluations left this month (only meaningful when apiKey is null). */
+  freeRemaining?: number;
+  /** Called after free evaluations were used or refused, so the parent can refresh the count. */
+  onFreeChanged: () => void;
+  /** No way to run right now (no key, no free evaluations left): the form stays editable. */
+  disabled?: boolean;
   criteriaSets: CriteriaSet[];
   /** Called when Anthropic rejects the key, so the parent can ask for a new one. */
   onInvalidApiKey: (message: string) => void;
@@ -146,6 +156,12 @@ export function EvaluateForm({
       setError("Choose a criteria set.");
       return;
     }
+    if (apiKey === null && companies.length > freeRemaining) {
+      setError(
+        `You have ${freeRemaining} free evaluation${freeRemaining === 1 ? "" : "s"} left this month. Remove some companies, or use your own API key.`
+      );
+      return;
+    }
     setError(null);
     setProgress({ done: 0, total: companies.length, current: companies[0], startedAt: Date.now() });
 
@@ -157,9 +173,16 @@ export function EvaluateForm({
         const res = await fetch("/api/evaluate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company, criteriaSetId, apiKey }),
+          body: JSON.stringify(apiKey === null ? { company, criteriaSetId } : { company, criteriaSetId, apiKey }),
         });
         const body = await res.json().catch(() => ({}));
+        if (body.code === "free_unavailable") {
+          results.push({ company, error: body.error });
+          for (const skipped of companies.slice(i + 1)) {
+            results.push({ company: skipped, error: "Not run: no free evaluations left." });
+          }
+          break;
+        }
         if (body.code === "invalid_api_key") {
           setProgress(null);
           onInvalidApiKey(body.error);
@@ -173,6 +196,7 @@ export function EvaluateForm({
     }
 
     setProgress(null);
+    if (apiKey === null) onFreeChanged();
     if (results.length === 1 && results[0].error) {
       setError(results[0].error);
       return;
@@ -243,12 +267,14 @@ export function EvaluateForm({
               ? "No companies added yet"
               : `${companies.length} compan${companies.length === 1 ? "y" : "ies"} · ${selectedCriteriaSet?.name ?? "no criteria set"}`}
           </span>
-          <button type="submit" disabled={loading} className="btn btn-primary">
+          <button type="submit" disabled={loading || disabled} className="btn btn-primary">
             {loading
               ? "Evaluating..."
               : companies.length > 1
-                ? `Evaluate ${companies.length} companies`
-                : "Run evaluation"}
+                ? `Evaluate ${companies.length} companies${apiKey === null ? " (free)" : ""}`
+                : apiKey === null
+                  ? "Run free evaluation"
+                  : "Run evaluation"}
           </button>
         </div>
       </div>

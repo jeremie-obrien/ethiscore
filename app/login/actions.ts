@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { isDisposableEmail } from "@/lib/auth/email";
 import { safeNextPath } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,6 +16,9 @@ export async function sendMagicLink(_prev: SendLinkState, formData: FormData): P
   const next = safeNextPath(formData.get("next"));
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return { error: "Enter a valid email address." };
+  }
+  if (isDisposableEmail(email)) {
+    return { error: "Disposable email addresses can't be used. Please use your regular email address." };
   }
 
   // Server Actions already reject cross-site requests, so Origin is this site. Supabase

@@ -1,23 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { CriteriaSet, EvaluateResult } from "@/lib/scoring/schema";
-import { ApiKeyForm } from "./ApiKeyForm";
-import { clearApiKey, loadApiKey, maskApiKey } from "./apiKeyStore";
 import { EvaluateForm } from "./EvaluateForm";
 import { ScoreReport } from "./ScoreReport";
 import { StatusChip } from "./StatusChip";
+import { UsageBanner } from "./UsageBanner";
+import { useEvaluationAccess } from "./useEvaluationAccess";
 import { pct } from "./scoreStatus";
-
-function KeyIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-      <circle cx="5.5" cy="10.5" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M7.7 8.3L13 3m-2 2l1.5 1.5M9.5 6.5L11 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 export function EvaluateClient({
   criteriaSets,
@@ -32,9 +23,8 @@ export function EvaluateClient({
   rerunFrom?: { id: string; company: string };
   skipDraft?: boolean;
 }) {
-  // undefined until mounted: the key lives in browser storage, which the server can't see.
-  const [apiKey, setApiKey] = useState<string | null | undefined>(undefined);
-  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const access = useEvaluationAccess();
+  const [keyRejected, setKeyRejected] = useState<string | null>(null);
   const [results, setResults] = useState<EvaluateResult[] | null>(null);
   const [replaceChoice, setReplaceChoice] = useState<"pending" | "kept" | "replaced" | null>(null);
   const [replacing, setReplacing] = useState(false);
@@ -44,14 +34,14 @@ export function EvaluateClient({
       ? results[0]
       : undefined;
 
-  useEffect(() => {
-    setApiKey(loadApiKey());
-  }, []);
+  const { apiKey, free } = access;
+  const freeRemaining = free?.available ? free.remaining : 0;
+  // Own key if set; otherwise free evaluations while any are left; otherwise nothing to run on.
+  const canRun = Boolean(apiKey) || freeRemaining > 0;
 
-  function handleForgetKey(reason?: string) {
-    clearApiKey();
-    setApiKey(null);
-    setApiKeyError(reason ?? null);
+  function handleKeyRejected(message: string) {
+    access.forgetApiKey();
+    setKeyRejected(message);
   }
 
   function handleResult(next: EvaluateResult[]) {
@@ -75,31 +65,28 @@ export function EvaluateClient({
 
   return (
     <div className="flex flex-col gap-6">
-      {apiKey === undefined ? null : apiKey === null ? (
-        <ApiKeyForm error={apiKeyError} onSaved={setApiKey} />
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm">
-            <span className="flex items-center gap-2 text-ink-secondary">
-              <span className="text-accent">
-                <KeyIcon />
-              </span>
-              Using your Anthropic key <code className="text-xs text-ink-primary">{maskApiKey(apiKey)}</code>
-            </span>
-            <button type="button" onClick={() => handleForgetKey()} className="btn btn-ghost btn-sm">
-              Change or forget
-            </button>
-          </div>
-          <EvaluateForm
-          apiKey={apiKey}
+      {keyRejected && (
+        <p className="rounded-lg border border-critical/30 bg-critical/5 px-4 py-3 text-sm text-critical">
+          {keyRejected} It has been removed from this browser.{" "}
+          <Link href="/profile" className="font-medium underline underline-offset-2">
+            Add a different key
+          </Link>
+        </p>
+      )}
+      <UsageBanner access={access} />
+      {apiKey !== undefined && free !== null && (
+        <EvaluateForm
+          apiKey={apiKey ?? null}
+          freeRemaining={freeRemaining}
+          disabled={!canRun}
           criteriaSets={criteriaSets}
-          onInvalidApiKey={handleForgetKey}
+          onInvalidApiKey={handleKeyRejected}
+          onFreeChanged={access.refreshFree}
           onResult={handleResult}
           initialCompanies={initialCompanies}
           initialCriteriaSetId={initialCriteriaSetId}
           skipDraft={skipDraft}
-          />
-        </>
+        />
       )}
 
       {results && (

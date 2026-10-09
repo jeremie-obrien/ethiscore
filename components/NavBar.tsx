@@ -47,15 +47,22 @@ export function NavBar({ userEmail }: { userEmail: string | null }) {
         <div className="ml-auto flex items-center gap-2">
           {userEmail ? (
             <>
-              <span
-                className="hidden h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent uppercase sm:flex"
-                aria-hidden="true"
+              <Link
+                href="/profile"
+                title={`Profile: ${userEmail}`}
+                className={`flex items-center gap-2 rounded-md px-1.5 py-1 transition hover:bg-subtle ${
+                  pathname === "/profile" ? "bg-subtle" : ""
+                }`}
               >
-                {userEmail.charAt(0)}
-              </span>
-              <span className="hidden max-w-48 truncate text-sm text-ink-secondary md:inline" title={userEmail}>
-                {userEmail}
-              </span>
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent uppercase"
+                  aria-hidden="true"
+                >
+                  {userEmail.charAt(0)}
+                </span>
+                <span className="hidden max-w-48 truncate text-sm text-ink-secondary md:inline">{userEmail}</span>
+                <span className="sr-only md:hidden">Profile</span>
+              </Link>
               <form action="/auth/signout" method="post">
                 <button type="submit" className="btn btn-ghost btn-sm">
                   Sign out

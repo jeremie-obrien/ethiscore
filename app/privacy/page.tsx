@@ -7,11 +7,11 @@ export const metadata: Metadata = {
 // GDPR art. 13 and the French LCEN (mentions légales) require the person responsible for
 // the site to be identified.
 const OPERATOR_NAME = "Jérémie O'BRIEN";
-const LAST_UPDATED = "6 October 2026";
+const LAST_UPDATED = "8 October 2026";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
+    <section id={id} className="mb-8 scroll-mt-20">
       <h2 className="mb-2 text-lg font-semibold tracking-tight">{title}</h2>
       <div className="flex flex-col gap-3 text-sm leading-relaxed text-ink-secondary">{children}</div>
     </section>
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
       <Section title="In short">
         <ul className="list-disc space-y-1 pl-5">
           <li>We collect only what&rsquo;s needed to run your account: your email address and the criteria sets and evaluations you create.</li>
-          <li>Your Anthropic API key stays in your browser. It is sent with each evaluation and never stored or logged on our servers.</li>
+          <li>Each month you get a few free evaluations; after that, you can use your own Anthropic API key, which stays in your browser and is never stored or logged on our servers.</li>
           <li>No advertising, no analytics, no tracking, and we never sell or share your data for marketing.</li>
           <li>You can ask us at any time to see, correct, export or delete your data.</li>
         </ul>
@@ -68,15 +68,28 @@ export default function PrivacyPage() {
           and to keep the service running.
         </p>
         <p>
+          <strong className="text-ink-primary">Free evaluation records</strong>, to stop the free allowance from
+          being abused (for example with many accounts). For each free evaluation we record when it happened and
+          scrambled (keyed-hash) versions of your email address, your network address (your IP address, or for
+          IPv6 the block your provider assigned) and a random browser identifier. These can&rsquo;t be read back as
+          the original values. They are deleted after about two months.
+        </p>
+        <p>
           Legal basis: providing the service you signed up for (GDPR art. 6(1)(b)), and our legitimate
-          interest in keeping the service secure and free of abuse (art. 6(1)(f)) for technical logs and bot
-          protection.
+          interest in keeping the service secure and free of abuse (art. 6(1)(f)) for technical logs, bot
+          protection and free evaluation records.
         </p>
       </Section>
 
-      <Section title="Your Anthropic API key">
+      <Section title="Evaluations and your Anthropic API key">
         <p>
-          Evaluations run on your own Anthropic account. Your key is kept in your browser&rsquo;s storage: for
+          <strong className="text-ink-primary">Free evaluations</strong> run on EthiScore&rsquo;s own Anthropic
+          account: the company name and your criteria are sent to Anthropic, which processes them on our behalf to
+          produce the evaluation.
+        </p>
+        <p>
+          <strong className="text-ink-primary">With your own key</strong>, evaluations run on your Anthropic
+          account. Your key is kept in your browser&rsquo;s storage: for
           the current tab only, or on this device if you tick &ldquo;remember on this device&rdquo;. It is sent
           over an encrypted connection with each evaluation, passed to Anthropic for that request, and never
           stored or logged by us. You can remove it at any time with &ldquo;Change or forget key&rdquo;.
@@ -88,13 +101,18 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="Cookies and browser storage">
+      <Section id="cookies" title="Cookies and browser storage">
         <p>
-          We use only what&rsquo;s strictly necessary for the site to work, so no consent banner is required:
+          We use only what&rsquo;s strictly necessary for the site to work and to keep it secure, so no consent
+          is required. No analytics, advertising or tracking cookies.
         </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Sign-in cookies, which keep you signed in.</li>
-          <li>Browser storage for your API key (see above) and for an unfinished evaluation form, so it survives moving between pages.</li>
+          <li>
+            A random browser identifier (<code>es_bid</code>, kept up to 400 days), used only to prevent abuse of free
+            evaluations.
+          </li>
+          <li>Browser storage for your API key (see above), an unfinished evaluation form, and whether you&rsquo;ve dismissed the cookie notice.</li>
           <li>Cloudflare Turnstile, which checks that sign-in requests come from a person rather than a bot.</li>
         </ul>
       </Section>
@@ -105,6 +123,7 @@ export default function PrivacyPage() {
           <li><strong className="text-ink-primary">Supabase</strong>: database and sign-in. Data stored in Ireland (EU).</li>
           <li><strong className="text-ink-primary">Vercel</strong>: website hosting.</li>
           <li><strong className="text-ink-primary">Amazon Web Services (Amazon SES)</strong>: sending sign-in emails, from Sweden (EU).</li>
+          <li><strong className="text-ink-primary">Anthropic</strong>: running free evaluations (company names and criteria only).</li>
           <li><strong className="text-ink-primary">Cloudflare</strong>: domain name, email forwarding and bot protection.</li>
         </ul>
         <p>
@@ -117,7 +136,8 @@ export default function PrivacyPage() {
       <Section title="How long we keep it">
         <p>
           Your account and its data are kept until you ask us to delete them. We act on deletion requests
-          within 30 days. Providers&rsquo; technical logs are kept for the short periods set by each provider.
+          within 30 days. Free evaluation records are deleted after about two months. Providers&rsquo; technical
+          logs are kept for the short periods set by each provider.
         </p>
       </Section>
 

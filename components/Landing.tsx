@@ -73,8 +73,8 @@ const FEATURES = [
     body: "Your criteria and evaluations are visible only to you, enforced by the database itself.",
   },
   {
-    title: "Your key stays with you",
-    body: "Evaluations run on your own Anthropic API key, kept in your browser and never stored on our servers.",
+    title: "Free to start",
+    body: "Get 3 free evaluations every month. Need more? Use your own Anthropic API key: it stays in your browser, never on our servers.",
   },
   {
     title: "Compare and re-run",
@@ -104,7 +104,7 @@ export function Landing() {
             </a>
           </div>
           <p className="mt-4 text-sm text-ink-muted">
-            Sign in with just your email. Uses your own Anthropic API key.
+            Sign in with just your email. 3 free evaluations every month, no card needed.
           </p>
         </div>
         <SampleReport />
@@ -144,11 +144,7 @@ export function Landing() {
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Score your first company in a few minutes</h2>
             <p className="mt-1 text-sm text-ink-secondary">
-              All you need is an email address and an{" "}
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="link">
-                Anthropic API key
-              </a>
-              .
+              All you need is an email address: your first 3 evaluations each month are free.
             </p>
           </div>
           <Link href="/login" className="btn btn-primary btn-lg">

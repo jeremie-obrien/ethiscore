@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CriteriaSet, EvaluationRecord } from "@/lib/scoring/schema";
+import { AccessBanner } from "./AccessBanner";
 import { StatusChip } from "./StatusChip";
 import { pct } from "./scoreStatus";
 
@@ -61,14 +62,14 @@ function ActionCard({
 function GettingStarted() {
   const steps = [
     {
-      title: "Get an Anthropic API key",
+      title: "Use your free evaluations",
       body: (
         <>
-          Create one in a workspace at{" "}
+          You get 3 free evaluations every month. For more, add your own key from{" "}
           <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="link">
             console.anthropic.com
           </a>
-          . Evaluations run on your own account.
+          .
         </>
       ),
     },
@@ -134,6 +135,10 @@ export function Dashboard({
           {evaluations.length === 0 ? "Welcome to EthiScore" : "Welcome back"}
         </h1>
         {email && <p className="mt-1 text-sm text-ink-secondary">Signed in as {email}</p>}
+      </div>
+
+      <div className="mb-6">
+        <AccessBanner />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

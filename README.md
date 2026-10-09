@@ -36,6 +36,22 @@ npm install
    people reading the email on another device can type it on the sign-in page.
 5. Copy `.env.example` to `.env.local` and fill in the Project URL and publishable/anon key.
 
+### Free evaluations (optional)
+
+Signed-in users get a few free evaluations a month on EthiScore's own Anthropic key: 3 per
+calendar month per email (Gmail dots and `+tag` collapsed; `+tag` aliases get none), per
+network (IPv4 address or IPv6 /56) and per browser (httpOnly `es_bid` cookie), plus a global
+daily cap. Counts live in `free_evaluation_claims`, readable only with the Supabase secret key.
+
+1. Run `supabase/migrations/0002_free_evaluations.sql` in the SQL Editor.
+2. Set the server-only variables listed in `.env.example` (`FREE_TIER_ANTHROPIC_API_KEY`,
+   `SUPABASE_SECRET_KEY`, `FREE_TIER_HASH_SECRET`, optional limits) in Vercel, marked
+   Sensitive. Without them, free evaluations are simply switched off.
+3. Give the Anthropic key its own workspace with a monthly spend limit.
+
+Sign-up refuses disposable email domains (`lib/auth/disposableDomains.ts`, refreshed with
+`node scripts/update-disposable-domains.mjs`).
+
 Supabase's built-in email sender is for testing only and is heavily rate-limited. Before
 inviting real users, set up custom SMTP under **Authentication → Emails → SMTP Settings**
 (e.g. Resend's free tier).

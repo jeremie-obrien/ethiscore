@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { CookieNotice } from "@/components/CookieNotice";
 import { NavBar } from "@/components/NavBar";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </a>
           </div>
         </footer>
+        <CookieNotice />
       </body>
     </html>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ApiKeyForm } from "./ApiKeyForm";
-import { clearApiKey, loadApiKey } from "./apiKeyStore";
+import { useEvaluationAccess } from "./useEvaluationAccess";
 
 interface StaleEvaluation {
   id: string;
@@ -33,13 +33,15 @@ export function EditGateModal({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const access = useEvaluationAccess();
+  const { apiKey } = access;
 
-  useEffect(() => {
-    setApiKey(loadApiKey());
-  }, []);
-
-  const needsApiKey = !apiKey && staleEvaluations.some((e) => choices[e.id] === "rerun");
+  // Re-runs use the visitor's own key if set, otherwise their free evaluations. The modal
+  // can't be left until every row is resolved, so a key can be added right here if needed.
+  const rerunCount = staleEvaluations.filter((e) => choices[e.id] === "rerun").length;
+  const freeRemaining = access.free?.available ? access.free.remaining : 0;
+  const ready = apiKey !== undefined && access.free !== null;
+  const needsApiKey = ready && !apiKey && rerunCount > freeRemaining;
 
   function setAll(choice: RowChoice) {
     setChoices(Object.fromEntries(staleEvaluations.map((e) => [e.id, choice])));
@@ -60,13 +62,13 @@ export function EditGateModal({
           const res = await fetch("/api/evaluate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ company: evaluation.company, criteriaSetId, apiKey }),
+            body: JSON.stringify(
+              apiKey ? { company: evaluation.company, criteriaSetId, apiKey } : { company: evaluation.company, criteriaSetId }
+            ),
           });
           const body = await res.json().catch(() => ({}));
-          if (body.code === "invalid_api_key") {
-            clearApiKey();
-            setApiKey(null);
-          }
+          if (body.code === "invalid_api_key") access.forgetApiKey();
+          if (!apiKey) access.refreshFree();
           if (!res.ok) throw new Error(body.error ?? `Failed to re-run evaluation for ${evaluation.company}`);
           const delRes = await fetch(`/api/evaluations/${evaluation.id}`, { method: "DELETE" });
           if (!delRes.ok) throw new Error(`Re-ran ${evaluation.company} but failed to remove the old evaluation`);
@@ -136,8 +138,14 @@ export function EditGateModal({
         </div>
 
         {needsApiKey && (
-          <div className="mt-4">
-            <ApiKeyForm onSaved={setApiKey} />
+          <div className="mt-4 flex flex-col gap-3">
+            <p className="text-sm text-ink-secondary">
+              {freeRemaining === 0
+                ? "You have no free evaluations left this month."
+                : `You have ${freeRemaining} free evaluation${freeRemaining === 1 ? "" : "s"} left this month, for ${rerunCount} re-runs.`}{" "}
+              Delete some instead, or add your own API key:
+            </p>
+            <ApiKeyForm onSaved={access.keySaved} />
           </div>
         )}
 
@@ -146,7 +154,7 @@ export function EditGateModal({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={busy || needsApiKey}
+          disabled={busy || !ready || needsApiKey}
           className="btn btn-primary mt-5 w-full"
         >
           {busy
